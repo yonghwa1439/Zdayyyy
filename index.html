@@ -268,6 +268,11 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:poin
 .date-filter{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
 .date-filter input[type=date]{padding:6px 10px;border:1px solid var(--gray-border);border-radius:8px;font-size:12px;outline:none}
 .date-filter input[type=date]:focus{border-color:var(--teal)}
+/* Field drag rows */
+.field-drag-row{cursor:grab;user-select:none;border-bottom:1px solid var(--gray-border);transition:background .15s}
+.field-drag-row:active{cursor:grabbing}
+.field-drag-row.dragging{opacity:.4;background:#f0f8ff}
+.field-drag-row.drag-over{border-top:2px solid var(--teal)}
 
 /* ── Responsive ── */
 @media(max-width:520px){
@@ -341,13 +346,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:poin
       </div>
       <div class="section-label">基本資料</div>
       <div id="dynamic-form-fields">
-        <!-- 由 applySettings() 動態渲染 -->
-        <div class="field"><label>姓名 *</label><input type="text" id="c-name" placeholder="請輸入姓名"></div>
-        <div class="field-row">
-          <div class="field"><label>聯絡電話 *</label><input type="tel" id="c-phone" placeholder="09xx-xxxxxx"></div>
-          <div class="field" id="c-ig-wrap"><label>Instagram 帳號</label><input type="text" id="c-ig" placeholder="@zdayyyy"></div>
-        </div>
-        <div class="field" id="c-email-wrap" style="display:none"><label id="c-email-label">Email</label><input type="email" id="c-email" placeholder="your@email.com"></div>
+        <!-- 由 renderOrderForm() 動態產生 -->
       </div>
       <div class="section-label">取貨資訊</div>
       <div class="field"><label>超商選擇 *</label></div>
@@ -355,15 +354,15 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:poin
         <button class="cvs-btn" id="cvs-711" onclick="selectCvs('7-11')">🏪 7-ELEVEN</button>
         <button class="cvs-btn" id="cvs-family" onclick="selectCvs('全家')">🏪 全家</button>
       </div>
-      <div class="field-row">
-        <div class="field"><label>門市名稱 *</label><input type="text" id="c-store-name" placeholder="例：信義門市"></div>
-        <div class="field" id="c-store-no-wrap"><label>店號／地址（選填）</label><input type="text" id="c-store-no" placeholder="例：168899"></div>
+      <div id="dynamic-form-fields-2">
+        <!-- storeName/storeNo 動態產生 -->
       </div>
       <div class="section-label">付款方式</div>
       <div class="pay-list" id="pay-list"></div>
       <div id="pay-info-area"></div>
-      <div class="section-label">其他</div>
-      <div class="field" id="c-note-wrap"><label>備註（選填）</label><input type="text" id="c-note" placeholder="色號備注、特殊需求…"></div>
+      <div id="dynamic-form-fields-3">
+        <!-- note 等其他欄位動態產生 -->
+      </div>
       <div class="pay-reminder-box hidden" id="pay-reminder-box"></div>
       <button class="btn-ft-primary" id="btn-submit" onclick="submitOrder()">確認下單</button>
     </div>
@@ -532,29 +531,25 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:poin
         <div class="field"><label>下單成功頁說明（支援換行）</label><textarea id="cfg-success-msg" rows="3" style="resize:vertical"></textarea></div>
       </div>
       <div class="settings-section">
-        <h3>📧 Email 欄位設定</h3>
-        <div class="field"><label>前台是否顯示 Email 欄位</label>
-          <select id="cfg-email-show">
-            <option value="0">不顯示</option>
-            <option value="1">顯示（選填）</option>
-            <option value="2">顯示（必填）</option>
-          </select>
+        <h3>📝 前台訂單欄位管理</h3>
+        <p style="font-size:12px;color:var(--gray-text);margin-bottom:12px">統一管理前台訂單表單的欄位。可調整顯示/必填，拖曳列可排序。</p>
+        <table style="width:100%;font-size:13px;border-collapse:collapse;table-layout:fixed" id="fields-table">
+          <thead><tr style="background:var(--gray-bg)">
+            <th style="width:28px;padding:6px 4px;text-align:center;color:var(--gray-text)">⠿</th>
+            <th style="padding:6px 8px;text-align:left;font-weight:500;color:var(--text-sub)">前台顯示文字</th>
+            <th style="width:60px;padding:6px 4px;text-align:center;font-weight:500;color:var(--text-sub)">類型</th>
+            <th style="width:46px;padding:6px 4px;text-align:center;font-weight:500;color:var(--text-sub)">顯示</th>
+            <th style="width:46px;padding:6px 4px;text-align:center;font-weight:500;color:var(--text-sub)">必填</th>
+            <th style="width:38px;padding:6px 4px;text-align:center;font-weight:500;color:var(--text-sub)">刪除</th>
+          </tr></thead>
+          <tbody id="fields-tbody"></tbody>
+        </table>
+        <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+          <button class="btn btn-sm btn-primary" onclick="addFieldRow()">＋ 新增欄位</button>
         </div>
-        <div class="field"><label>Email 欄位標籤文字</label><input type="text" id="cfg-email-label" placeholder="Email（出貨通知用）"></div>
       </div>
       <div class="settings-section">
-        <h3>📝 前台欄位控制</h3>
-        <p style="font-size:12px;color:var(--gray-text);margin-bottom:10px">控制前台訂購表單中各欄位的顯示與必填狀態</p>
-        <table style="width:100%;font-size:13px;border-collapse:collapse">
-          <thead><tr style="background:var(--gray-bg)">
-            <th style="padding:6px 8px;text-align:left;font-weight:500;color:var(--text-sub)">欄位</th>
-            <th style="padding:6px 8px;text-align:center;font-weight:500;color:var(--text-sub)">顯示</th>
-            <th style="padding:6px 8px;text-align:center;font-weight:500;color:var(--text-sub)">必填</th>
-          </tr></thead>
-          <tbody id="field-ctrl-tbody"></tbody>
-        </table>
-        <button class="btn btn-primary" style="margin-top:12px" onclick="saveFieldConfig()">💾 儲存欄位設定</button>
-      </div>
+        <h3>🔑 密碼管理</h3>
         <p style="font-size:13px;color:var(--text-sub);line-height:1.7">登入密碼請至 <b>Firebase Console → Authentication</b> 修改。</p>
       </div>
       <button class="btn btn-primary btn-full" onclick="saveSettings()">💾 儲存所有設定</button>
@@ -592,11 +587,26 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:poin
         <input type="text" id="f-powers" placeholder="無度數,-1.00,-1.50,-2.00,-3.00">
       </div>
       <div class="field span2">
-        <label>商品圖片網址（可多張，建議用 <a href="https://imgur.com" target="_blank" style="color:var(--teal)">Imgur</a> 上傳後貼網址）</label>
+        <label>商品圖片</label>
+        <!-- 上傳區：手機/電腦皆可直接選相片，不限張數 -->
+        <div id="img-upload-area" style="border:2px dashed var(--gray-border);border-radius:10px;padding:16px;text-align:center;cursor:pointer;position:relative;transition:border-color .2s;margin-bottom:10px"
+          onclick="$('f-img-file').click()"
+          ondragover="event.preventDefault();this.style.borderColor='var(--teal)'"
+          ondragleave="this.style.borderColor='var(--gray-border)'"
+          ondrop="event.preventDefault();this.style.borderColor='var(--gray-border)';handleImgFiles(event.dataTransfer.files)">
+          <input type="file" id="f-img-file" accept="image/*" multiple capture="environment"
+            style="display:none" onchange="handleImgFiles(this.files)">
+          <div style="font-size:26px;margin-bottom:6px">📷</div>
+          <div style="font-size:13px;color:var(--text-sub)">點此從手機相簿或電腦選取圖片</div>
+          <div style="font-size:11px;color:var(--gray-text);margin-top:4px">支援多選・JPG / PNG・自動壓縮上傳</div>
+        </div>
+        <!-- 或貼網址 -->
+        <div style="font-size:11px;color:var(--gray-text);margin-bottom:6px;text-align:center">— 或直接貼上圖片網址 —</div>
         <div id="img-url-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px"></div>
         <button type="button" class="btn btn-sm" onclick="addImgUrlField()">＋ 新增圖片網址</button>
+        <!-- 預覽區 -->
+        <div id="img-upload-progress" style="font-size:12px;color:var(--teal);margin-top:8px;min-height:16px"></div>
         <div class="img-thumbs" id="img-thumbs" style="margin-top:10px"></div>
-        <div id="img-upload-progress" style="font-size:12px;margin-top:4px"></div>
       </div>
     </div>
     <div class="modal-actions">
@@ -674,6 +684,9 @@ import {
 import {
   getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import {
+  getStorage, ref as sRef, uploadBytes, getDownloadURL
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCIpX_ZMFPqDPcepr_AHgCCtK4dqiuD3Es",
@@ -686,6 +699,7 @@ const firebaseConfig = {
 const app     = initializeApp(firebaseConfig);
 const db      = getFirestore(app);
 const auth    = getAuth(app);
+const storage = getStorage(app);
 
 // ── State ────────────────────────────────────────
 let products   = [];
@@ -698,16 +712,16 @@ let settings   = {
   ship:60, freeShip:1200, freeShipText:'消費滿 NT$1,200 免運費！', shipLabel:'超商運費',
   payReminder:'請於 48 小時內完成付款，付款後請截圖傳至 IG 私訊通知我們 🙏',
   successMsg:'感謝您的訂購！\n我們將盡快確認並處理您的訂單。\n如有問題歡迎 IG 私訊詢問 💚',
-  emailShow:'0', emailLabel:'Email（出貨通知用）',
-  // 前台欄位控制：每個欄位 { show: bool, required: bool }
-  fieldConfig:{
-    name:      {show:true,  required:true },
-    phone:     {show:true,  required:true },
-    ig:        {show:true,  required:false},
-    storeName: {show:true,  required:true },
-    storeNo:   {show:true,  required:false},
-    note:      {show:true,  required:false}
-  }
+  // 統一欄位設定陣列（可自由新增/排序）
+  fields:[
+    {key:'name',      label:'姓名',             type:'text',     visible:true,  required:true },
+    {key:'phone',     label:'聯絡電話',          type:'tel',      visible:true,  required:true },
+    {key:'ig',        label:'Instagram 帳號',   type:'text',     visible:true,  required:false},
+    {key:'email',     label:'Email',            type:'email',    visible:false, required:false},
+    {key:'storeName', label:'門市名稱',          type:'text',     visible:true,  required:true },
+    {key:'storeNo',   label:'店號／地址',        type:'text',     visible:true,  required:false},
+    {key:'note',      label:'備註',             type:'textarea', visible:true,  required:false},
+  ]
 };
 let cart = {}, selectedCvs='', selectedPay='', isAdmin=false;
 let storeSearch = '';
@@ -774,7 +788,24 @@ async function loadPublicData(){
       getDocs(collection(db,'payMethods')),
       getDoc(doc(db,'store','discounts')),
     ]);
-    if(sd.exists()) settings={...settings,...sd.data()};
+    if(sd.exists()){
+      const d=sd.data();
+      settings={...settings,...d};
+      // 遷移舊格式：若有 emailShow 但沒有 fields，自動遷移
+      if(!settings.fields||!settings.fields.length){
+        const fc=settings.fieldConfig||{};
+        const emailShow=settings.emailShow||'0';
+        settings.fields=[
+          {key:'name',      label:'姓名',            type:'text',     visible:true,               required:true},
+          {key:'phone',     label:'聯絡電話',         type:'tel',      visible:true,               required:true},
+          {key:'ig',        label:'Instagram 帳號',  type:'text',     visible:fc.ig?.show!==false, required:fc.ig?.required||false},
+          {key:'email',     label:'Email',           type:'email',    visible:emailShow!=='0',     required:emailShow==='2'},
+          {key:'storeName', label:'門市名稱',         type:'text',     visible:true,               required:true},
+          {key:'storeNo',   label:'店號／地址',       type:'text',     visible:fc.storeNo?.show!==false, required:fc.storeNo?.required||false},
+          {key:'note',      label:'備註',            type:'textarea', visible:fc.note?.show!==false,    required:fc.note?.required||false},
+        ];
+      }
+    }
     products=[]; ps.forEach(d=>products.push({...d.data(),_docId:d.id}));
     if(!products.length) await seedProducts();
     payMethods=[]; pms.forEach(d=>payMethods.push({...d.data(),_docId:d.id}));
@@ -816,6 +847,157 @@ async function seedPayMethods(){
 }
 
 // ── Settings ──────────────────────────────────────
+// ── 統一欄位管理系統 ─────────────────────────────
+// key → 哪個 dynamic-form-fields 容器（1=基本資料, 2=取貨區, 3=其他）
+const _fieldGroup={
+  name:1, phone:1, ig:1, email:1,
+  storeName:2, storeNo:2,
+  note:3,
+};
+const _fixedKeys=['name','phone','storeName']; // 不可刪除，永遠顯示必填
+
+// 取得目前 fields（從 settings 讀，確保有預設）
+function getFields(){
+  return (settings.fields&&settings.fields.length)
+    ? settings.fields
+    : [
+        {key:'name',      label:'姓名',            type:'text',     visible:true,  required:true },
+        {key:'phone',     label:'聯絡電話',         type:'tel',      visible:true,  required:true },
+        {key:'ig',        label:'Instagram 帳號',  type:'text',     visible:true,  required:false},
+        {key:'email',     label:'Email',           type:'email',    visible:false, required:false},
+        {key:'storeName', label:'門市名稱',         type:'text',     visible:true,  required:true },
+        {key:'storeNo',   label:'店號／地址',       type:'text',     visible:true,  required:false},
+        {key:'note',      label:'備註',            type:'textarea', visible:true,  required:false},
+      ];
+}
+
+// ── 後台：渲染欄位管理表格 ────────────────────────
+let _dragSrcIdx=null;
+function renderFieldsTable(){
+  const fields=getFields();
+  const tbody=$('fields-tbody'); if(!tbody) return;
+  tbody.innerHTML=fields.map((f,i)=>{
+    const isFixed=_fixedKeys.includes(f.key);
+    const typeOpts=['text','tel','email','textarea'].map(t=>
+      `<option value="${t}"${f.type===t?' selected':''}>${t}</option>`).join('');
+    return `<tr class="field-drag-row" draggable="true"
+        ondragstart="fieldDragStart(${i})"
+        ondragover="fieldDragOver(event,${i})"
+        ondrop="fieldDrop(event,${i})"
+        ondragend="fieldDragEnd()">
+      <td style="text-align:center;padding:6px 4px;color:var(--gray-text);font-size:16px;cursor:grab">⠿</td>
+      <td style="padding:4px 6px">
+        <input type="text" value="${f.label}" placeholder="欄位名稱"
+          style="width:100%;padding:4px 6px;border:1px solid var(--gray-border);border-radius:6px;font-size:12px;outline:none"
+          oninput="updateField(${i},'label',this.value)">
+        ${isFixed?'<span style="font-size:10px;color:var(--gray-text)">（固定）</span>':''}
+      </td>
+      <td style="padding:4px 2px">
+        <select style="width:100%;padding:3px 4px;border:1px solid var(--gray-border);border-radius:6px;font-size:11px;outline:none"
+          onchange="updateField(${i},'type',this.value)">${typeOpts}</select>
+      </td>
+      <td style="text-align:center;padding:4px">
+        <input type="checkbox" ${f.visible?'checked':''} ${isFixed?'disabled':''}
+          onchange="updateField(${i},'visible',this.checked);renderFieldsTable()">
+      </td>
+      <td style="text-align:center;padding:4px">
+        <input type="checkbox" ${f.required?'checked':''} ${!f.visible||isFixed?'disabled':''}
+          onchange="updateField(${i},'required',this.checked)">
+      </td>
+      <td style="text-align:center;padding:4px">
+        ${isFixed?'':
+          `<button type="button" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:15px;padding:0 2px"
+            onclick="removeField(${i})">✕</button>`}
+      </td>
+    </tr>`;
+  }).join('');
+}
+function updateField(i,key,val){
+  const fields=getFields();
+  fields[i][key]=val;
+  settings.fields=fields;
+}
+function addFieldRow(){
+  const fields=getFields();
+  const key='field_'+Date.now();
+  fields.push({key,label:'新欄位',type:'text',visible:true,required:false});
+  settings.fields=fields;
+  renderFieldsTable();
+}
+function removeField(i){
+  const fields=getFields();
+  if(_fixedKeys.includes(fields[i]?.key)) return;
+  fields.splice(i,1);
+  settings.fields=fields;
+  renderFieldsTable();
+}
+// 拖曳排序
+function fieldDragStart(i){ _dragSrcIdx=i; }
+function fieldDragOver(e,i){ e.preventDefault(); }
+function fieldDrop(e,i){
+  e.preventDefault();
+  if(_dragSrcIdx===null||_dragSrcIdx===i) return;
+  const fields=getFields();
+  const [moved]=fields.splice(_dragSrcIdx,1);
+  fields.splice(i,0,moved);
+  settings.fields=fields;
+  _dragSrcIdx=null;
+  renderFieldsTable();
+}
+function fieldDragEnd(){ _dragSrcIdx=null; }
+
+// ── 前台：動態產生訂單表單 ────────────────────────
+function renderOrderForm(){
+  const fields=getFields();
+  const containers={1:$('dynamic-form-fields'),2:$('dynamic-form-fields-2'),3:$('dynamic-form-fields-3')};
+  Object.values(containers).forEach(c=>{ if(c) c.innerHTML=''; });
+
+  // storeName+storeNo 一起放同一 field-row
+  const storeNameF=fields.find(f=>f.key==='storeName');
+  const storeNoF=fields.find(f=>f.key==='storeNo');
+
+  fields.forEach(f=>{
+    if(!f.visible) return;
+    const group=_fieldGroup[f.key]??1;
+    const container=containers[group]; if(!container) return;
+    // storeName+storeNo 合併一行
+    if(f.key==='storeName'){
+      const noVisible=storeNoF?.visible;
+      const storeNoHtml=noVisible
+        ?`<div class="field" id="dff-storeNo">
+            <label>${storeNoF.label}${storeNoF.required?' *':'（選填）'}</label>
+            <input type="${storeNoF.type||'text'}" id="c-storeNo" placeholder="例：168899">
+          </div>`:'';
+      container.insertAdjacentHTML('beforeend',`
+        <div class="field-row">
+          <div class="field" id="dff-storeName">
+            <label>${f.label}${f.required?' *':'（選填）'}</label>
+            <input type="${f.type||'text'}" id="c-storeName" placeholder="例：信義門市">
+          </div>
+          ${storeNoHtml}
+        </div>`);
+      return;
+    }
+    if(f.key==='storeNo') return; // 已在 storeName 裡處理
+    const reqMark=f.required?' *':'（選填）';
+    const inputHtml=f.type==='textarea'
+      ?`<textarea id="c-${f.key}" rows="2" style="resize:vertical" placeholder="${f.label}…"></textarea>`
+      :`<input type="${f.type||'text'}" id="c-${f.key}" placeholder="${f.type==='tel'?'09xx-xxxxxx':f.type==='email'?'your@email.com':f.label+'…'}">`;
+    container.insertAdjacentHTML('beforeend',`
+      <div class="field" id="dff-${f.key}">
+        <label>${f.label}${reqMark}</label>
+        ${inputHtml}
+      </div>`);
+  });
+
+  // 其他區加付款提醒佔位（若 fields-3 有內容才加 section-label）
+  const f3=$('dynamic-form-fields-3');
+  if(f3&&f3.children.length){
+    f3.insertAdjacentHTML('beforebegin','<div class="section-label">其他</div>');
+  }
+}
+
+// ── applySettings 精簡版 ─────────────────────────
 function applySettings(){
   document.title=$('nav-logo').textContent=$('s-title').textContent=settings.title;
   $('s-desc').textContent=settings.desc;
@@ -831,13 +1013,7 @@ function applySettings(){
   $('ship-label').textContent=settings.shipLabel||'超商運費';
   const rb=$('pay-reminder-box');
   settings.payReminder?(rb.textContent=settings.payReminder,rb.classList.remove('hidden')):rb.classList.add('hidden');
-  // Email field
-  const ew=$('c-email-wrap'), es=settings.emailShow||'0';
-  ew.style.display=es==='0'?'none':'';
-  if(es!=='0'){
-    $('c-email-label').textContent=(settings.emailLabel||'Email')+(es==='2'?' *':'（選填）');
-  }
-  applyFieldConfig();
+  renderOrderForm();
 }
 
 function loadSettingsForm(){
@@ -853,8 +1029,7 @@ function loadSettingsForm(){
   $('cfg-free-ship-text').value=settings.freeShipText||'';
   $('cfg-pay-reminder').value=settings.payReminder||'';
   $('cfg-success-msg').value=settings.successMsg||'';
-  $('cfg-email-show').value=settings.emailShow||'0';
-  $('cfg-email-label').value=settings.emailLabel||'';
+  renderFieldsTable();
 }
 
 async function saveSettings(){
@@ -864,74 +1039,23 @@ async function saveSettings(){
   settings.ship=Number($('cfg-ship').value)||0; settings.freeShip=Number($('cfg-free-ship').value)||0;
   settings.shipLabel=$('cfg-ship-label').value; settings.freeShipText=$('cfg-free-ship-text').value;
   settings.payReminder=$('cfg-pay-reminder').value; settings.successMsg=$('cfg-success-msg').value;
-  settings.emailShow=$('cfg-email-show').value; settings.emailLabel=$('cfg-email-label').value;
-  loading(true);
-  try{ await setDoc(doc(db,'store','settings'),settings); applySettings(); alert('✅ 設定已儲存！'); }
-  catch(e){ alert('❌ 儲存失敗：'+e.message); }
-  loading(false);
-}
-
-// ── 前台欄位控制 ──────────────────────────────────
-const _fieldDefs=[
-  {key:'name',      label:'姓名',           canToggle:false},
-  {key:'phone',     label:'聯絡電話',        canToggle:false},
-  {key:'ig',        label:'Instagram 帳號',  canToggle:true},
-  {key:'storeName', label:'門市名稱',         canToggle:false},
-  {key:'storeNo',   label:'店號／地址',       canToggle:true},
-  {key:'note',      label:'備註',            canToggle:true},
-];
-function renderFieldCtrlTable(){
-  const fc=settings.fieldConfig||{};
-  $('field-ctrl-tbody').innerHTML=_fieldDefs.map(f=>{
-    const cfg=fc[f.key]||{show:true,required:false};
-    const disabledShow=!f.canToggle?'disabled':''
-    const disabledReq=!cfg.show?'disabled':'';
-    return `<tr style="border-bottom:1px solid var(--gray-border)">
-      <td style="padding:7px 8px">${f.label}${!f.canToggle?'<span style="font-size:10px;color:var(--gray-text);margin-left:4px">（固定）</span>':''}</td>
-      <td style="text-align:center;padding:7px 8px"><input type="checkbox" id="fc-show-${f.key}" ${cfg.show?'checked':''} ${disabledShow} onchange="onFcChange('${f.key}')"></td>
-      <td style="text-align:center;padding:7px 8px"><input type="checkbox" id="fc-req-${f.key}" ${cfg.required?'checked':''} ${disabledReq}></td>
-    </tr>`;
-  }).join('');
-}
-function onFcChange(key){
-  const showEl=$(`fc-show-${key}`), reqEl=$(`fc-req-${key}`);
-  if(!showEl.checked){ reqEl.checked=false; reqEl.disabled=true; }
-  else reqEl.disabled=false;
-}
-async function saveFieldConfig(){
-  const fc={};
-  _fieldDefs.forEach(f=>{
-    fc[f.key]={
-      show: $(`fc-show-${f.key}`)?.checked ?? true,
-      required: $(`fc-req-${f.key}`)?.checked ?? false
-    };
+  // fields 已在 updateField/addFieldRow/removeField 即時更新到 settings.fields
+  // 確保固定欄位設定正確
+  const fields=getFields();
+  _fixedKeys.forEach(k=>{
+    const f=fields.find(x=>x.key===k);
+    if(f){ f.visible=true; f.required=true; }
   });
-  // name/phone/storeName 永遠顯示且必填
-  ['name','phone','storeName'].forEach(k=>{ fc[k]={show:true,required:true}; });
-  settings.fieldConfig=fc;
+  settings.fields=fields;
   loading(true);
-  try{ await setDoc(doc(db,'store','settings'),settings); applyFieldConfig(); alert('✅ 欄位設定已儲存！'); }
-  catch(e){ alert('❌ 儲存失敗：'+e.message); }
+  try{
+    await setDoc(doc(db,'store','settings'),settings);
+    applySettings();
+    alert('✅ 設定已儲存！');
+  }catch(e){ alert('❌ 儲存失敗：'+e.message); }
   loading(false);
 }
-function applyFieldConfig(){
-  // 依 fieldConfig 控制各欄位 visibility（動態欄位已在 HTML 預置，這裡控制顯示）
-  const fc=settings.fieldConfig||{};
-  const _ctrl=(key,wrapId,labelId,suffix)=>{
-    const cfg=fc[key]||{show:true,required:false};
-    const wrap=$(wrapId); if(!wrap) return;
-    wrap.style.display=cfg.show?'':'none';
-    if(labelId){
-      const lbl=$(labelId); if(lbl) lbl.textContent=(suffix||'')+(cfg.required?' *':'（選填）');
-    }
-  };
-  _ctrl('ig',     'c-ig-wrap',    null);
-  _ctrl('storeNo','c-store-no-wrap',null);
-  _ctrl('note',   'c-note-wrap',  null);
-}
 
-
-// ── Discount logic ────────────────────────────────
 function calcDiscount(cartItems){
   // returns { discAmt, label } for best matching rule
   let best = {discAmt:0, label:''};
@@ -1244,23 +1368,32 @@ function renderPayInfo(){
 
 // ── Submit order ──────────────────────────────────
 async function submitOrder(){
-  const fc=settings.fieldConfig||{};
-  const name=$('c-name').value.trim(), phone=$('c-phone').value.trim();
-  const ig=(fc.ig?.show!==false)?$('c-ig').value.trim():'';
-  const email=$('c-email').value.trim();
-  const storeName=$('c-store-name').value.trim();
-  const storeNo=(fc.storeNo?.show!==false)?$('c-store-no').value.trim():'';
-  const note=(fc.note?.show!==false)?($('c-note').value.trim()):'';
-  const cartItems=Object.values(cart);
-  if(!name) return alert('請填寫姓名');
-  if(!phone) return alert('請填寫聯絡電話');
-  if(fc.ig?.required&&!ig) return alert('請填寫 Instagram 帳號');
-  if(settings.emailShow==='2'&&!email) return alert('請填寫 Email');
+  const fields=getFields().filter(f=>f.visible);
+  const vals={};
+
+  // 動態讀取所有欄位值並驗證
+  for(const f of fields){
+    const el=$(`c-${f.key}`); if(!el) continue;
+    const v=el.value.trim();
+    vals[f.key]=v;
+    if(f.required&&!v){ el.focus(); return alert(`請填寫「${f.label}」`); }
+    // 格式驗證
+    if(f.key==='phone'&&v){
+      if(!/^\d{10}$/.test(v.replace(/[-\s]/g,'')))
+        return alert('聯絡電話請輸入完整 10 碼數字（例：0912345678）');
+    }
+    if(f.type==='email'&&v){
+      if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v))
+        return alert(`「${f.label}」格式不正確，請輸入有效的 Email`);
+    }
+  }
+
   if(!selectedCvs) return alert('請選擇取貨超商');
-  if(!storeName) return alert('請填寫取貨門市名稱');
-  if(fc.storeNo?.required&&!storeNo) return alert('請填寫店號／地址');
+  if(!(vals.storeName||'').trim()) return alert('請填寫取貨門市名稱');
+  const cartItems=Object.values(cart);
   if(!cartItems.length) return alert('請選擇至少一項商品');
   if(!selectedPay) return alert('請選擇付款方式');
+
   const payM=payMethods.find(p=>p._docId===selectedPay);
   const sub=cartItems.reduce((s,i)=>s+i.price*i.qty,0);
   const ship=calcShip(sub);
@@ -1270,14 +1403,27 @@ async function submitOrder(){
   const time=`${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
   const orderNo=genOrderNo();
   const order={
-    orderNo,time,name,phone,ig,email,cvs:selectedCvs,storeName,storeNo,
-    payMethod:payM?.name||'',
-    items:cartItems.map(i=>({
+    orderNo, time,
+    name:    vals.name||'',
+    phone:   vals.phone||'',
+    ig:      vals.ig||'',
+    email:   vals.email||'',
+    cvs:     selectedCvs,
+    storeName: vals.storeName||'',
+    storeNo:   vals.storeNo||'',
+    note:    vals.note||'',
+    payMethod: payM?.name||'',
+    items: cartItems.map(i=>({
       name:i.name, brand:i.brand||'', color:i.color||'', powerDisplay:i.powerDisplay||'',
       qty:i.qty, price:i.price, subtotal:i.price*i.qty
     })),
-    subtotal:sub, ship, discAmt, discLabel, total, note:note||'',
-    paid:false, shipped:false, shippedDate:'', noteAccount:'', noteShip:''
+    subtotal:sub, ship, discAmt, discLabel, total,
+    paid:false, shipped:false, shippedDate:'', noteAccount:'', noteShip:'',
+    // 儲存自訂欄位值（擴充）
+    extraFields: Object.fromEntries(
+      fields.filter(f=>!['name','phone','ig','email','storeName','storeNo','note'].includes(f.key))
+            .map(f=>[f.key, vals[f.key]||''])
+    )
   };
   loading(true);
   try{
@@ -1287,11 +1433,11 @@ async function submitOrder(){
     $('cart-panel').style.display='none';
     $('store-products').style.display='none';
     $('filter-bar').style.display='none';
+    $('store-tools').style.display='none';
     const sb=$('success-box'); sb.style.display='block';
     $('success-order-no').textContent='訂單編號：'+orderNo;
     $('success-msg').textContent=settings.successMsg||'感謝您的訂購！';
-    cart={};
-    updateCartCount();
+    cart={}; updateCartCount();
   }catch(e){ alert('❌ 下單失敗：'+e.message); }
   loading(false);
 }
@@ -1327,7 +1473,7 @@ function switchTab(tab){
   if(tab==='orders')   renderOrderTable();
   if(tab==='discount') renderDiscountAdmin();
   if(tab==='payment')  renderPayMethodList();
-  if(tab==='settings'){ loadSettingsForm(); renderFieldCtrlTable(); }
+  if(tab==='settings'){ loadSettingsForm(); }
   refreshStats();
 }
 
@@ -1396,13 +1542,11 @@ function openProductModal(docId=null){
     $('f-active').value='1';
     $('f-deg-mode').value='single';
   }
-  // 重建 img-url-list 欄位
+  // 重建 img-url-list 欄位（只放網址圖）
   const list=$('img-url-list');
   if(list){
     list.innerHTML='';
-    if(pendingImgs.length){
-      pendingImgs.forEach(img=>_appendImgUrlRow(img.url));
-    }
+    pendingImgs.filter(i=>!i.isNew).forEach(img=>_appendImgUrlRow(img.url));
   }
   renderImgThumbs();
   const prog=$('img-upload-progress');
@@ -1420,7 +1564,59 @@ function renderImgThumbs(){
 
 function removeImg(i){ pendingImgs.splice(i,1); renderImgThumbs(); }
 
-// ── Image URL management (圖片網址模式，不需要 Storage) ──
+// ── 圖片管理：支援直接上傳（Firebase Storage）＆ 網址 ──
+async function handleImgFiles(files){
+  if(!files||!files.length) return;
+  const prog=$('img-upload-progress');
+  prog.style.color='var(--teal)';
+  const arr=Array.from(files);
+  prog.textContent=`準備上傳 ${arr.length} 張…`;
+  let done=0, failed=0;
+  for(const file of arr){
+    prog.textContent=`上傳中 ${done+failed+1}/${arr.length}：${file.name}`;
+    try{
+      // 超過 1.5MB 先壓縮
+      const blob = file.size>1536*1024 ? await _compressImg(file,1400) : file;
+      const path=`products/${Date.now()}_${Math.random().toString(36).slice(2)}.jpg`;
+      const ref=sRef(storage,path);
+      await uploadBytes(ref, blob);
+      const url=await getDownloadURL(ref);
+      pendingImgs.push({url,isNew:true});
+      done++;
+      renderImgThumbs();
+    }catch(err){
+      failed++;
+      console.error(err);
+      const msg=err.code==='storage/unauthorized'
+        ? 'Firebase Storage 權限不足\n\n請到 Firebase Console → Storage → 規則，加入：\nallow write: if request.auth != null;'
+        : err.message;
+      alert('圖片上傳失敗：'+msg);
+    }
+  }
+  prog.textContent=done>0
+    ? `✅ 上傳完成 ${done} 張${failed?'，'+failed+' 張失敗':''}`
+    : `❌ 上傳失敗`;
+  // 重置 file input 讓同一檔案可再選
+  const fi=$('f-img-file'); if(fi) fi.value='';
+}
+
+function _compressImg(file, maxPx){
+  return new Promise(resolve=>{
+    const img=new Image(), url=URL.createObjectURL(file);
+    img.onload=()=>{
+      const scale=Math.min(1,maxPx/Math.max(img.width,img.height));
+      const w=Math.round(img.width*scale), h=Math.round(img.height*scale);
+      const c=document.createElement('canvas'); c.width=w; c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      URL.revokeObjectURL(url);
+      c.toBlob(b=>resolve(b||file),'image/jpeg',0.85);
+    };
+    img.onerror=()=>{ URL.revokeObjectURL(url); resolve(file); };
+    img.src=url;
+  });
+}
+
+// 貼網址欄位
 function _appendImgUrlRow(url=''){
   const list=$('img-url-list'); if(!list) return;
   const row=document.createElement('div');
@@ -1436,20 +1632,26 @@ function _appendImgUrlRow(url=''){
       onclick="this.parentElement.remove();syncImgUrls()">✕</button>`;
   list.appendChild(row);
 }
-function addImgUrlField(){
-  _appendImgUrlRow('');
-  syncImgUrls();
-}
+function addImgUrlField(){ _appendImgUrlRow(''); syncImgUrls(); }
 function syncImgUrls(){
   const list=$('img-url-list'); if(!list) return;
-  const urls=Array.from(list.querySelectorAll('input'))
-    .map(i=>i.value.trim()).filter(Boolean);
-  pendingImgs=urls.map(u=>({url:u,isNew:false}));
-  // 預覽縮圖
+  // 取得所有網址輸入，合併進 pendingImgs（去掉舊的 url-type，保留已上傳的）
+  const uploadedImgs=pendingImgs.filter(i=>i.isNew);
+  const urlImgs=Array.from(list.querySelectorAll('input'))
+    .map(i=>i.value.trim()).filter(Boolean).map(u=>({url:u,isNew:false}));
+  pendingImgs=[...uploadedImgs,...urlImgs];
+  renderImgThumbs();
+}
+
+// 統一縮圖渲染
+function renderImgThumbs(){
   const thumbs=$('img-thumbs'); if(!thumbs) return;
-  thumbs.innerHTML=urls.map((u,i)=>`
-    <div class="img-thumb">
-      <img src="${u}" alt="" onerror="this.src='';this.parentElement.style.background='var(--gray-bg)'">
+  thumbs.innerHTML=pendingImgs.map((img,i)=>`
+    <div class="img-thumb" style="position:relative;width:68px;height:68px;border-radius:8px;overflow:hidden;border:1px solid var(--gray-border);flex-shrink:0">
+      <img src="${img.url}" alt="" style="width:100%;height:100%;object-fit:cover"
+        onerror="this.src='';this.parentElement.style.background='var(--gray-bg)'">
+      <button type="button" onclick="removeImg(${i})"
+        style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1">✕</button>
     </div>`).join('');
 }
 
@@ -1933,20 +2135,20 @@ Object.assign(window,{
   selectCvs,selectPay,submitOrder,doLookup,
   doLogin,logout,switchTab,
   openProductModal,editProduct,saveProduct,toggleActive,deleteProduct,
-  addImgUrlField,syncImgUrls,removeImg,
+  addImgUrlField,syncImgUrls,removeImg,handleImgFiles,
   toggleProductSel,toggleProductSelAll,clearProductSel,batchProductActive,
   renderOrderTable,exportExcel,clearDateFilter,
   toggleOrderSel,toggleOrderSelAll,clearOrderSel,batchOrderStatus,batchDeleteOrders,
   toggleOrderField,updateOrderNote,
   renderDiscountAdmin,addDiscRule,removeDiscRule,discField,saveDiscounts,
   openPayModal,editPayMethod,savePayMethod,deletePayMethod,togglePayFields,
-  saveSettings,saveFieldConfig,onFcChange,closeModal,batchDeleteOrders
+  saveSettings,addFieldRow,removeField,updateField,fieldDragStart,fieldDragOver,fieldDrop,fieldDragEnd,closeModal,batchDeleteOrders
 });
 
 // ── Init ──────────────────────────────────────────
 async function init(){
   await loadPublicData();
-  applySettings(); renderStore(); renderPayList(); renderCart(); updateStoreStep('products');
+  applySettings(); renderStore(); renderPayList(); renderCart(); renderOrderForm(); updateStoreStep('products');
   onAuthStateChanged(auth, async(user)=>{
     loading(false);
     if(user){
