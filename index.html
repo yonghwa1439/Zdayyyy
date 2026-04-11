@@ -268,11 +268,34 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:poin
 .date-filter{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
 .date-filter input[type=date]{padding:6px 10px;border:1px solid var(--gray-border);border-radius:8px;font-size:12px;outline:none}
 .date-filter input[type=date]:focus{border-color:var(--teal)}
-/* Field drag rows */
+/* Field drag rows - desktop table */
 .field-drag-row{cursor:grab;user-select:none;border-bottom:1px solid var(--gray-border);transition:background .15s}
 .field-drag-row:active{cursor:grabbing}
 .field-drag-row.dragging{opacity:.4;background:#f0f8ff}
 .field-drag-row.drag-over{border-top:2px solid var(--teal)}
+
+/* Field cards - mobile */
+.field-card{background:var(--white);border:1px solid var(--gray-border);border-radius:12px;padding:12px;margin-bottom:10px;touch-action:manipulation}
+.field-card-row1{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.field-card-drag{font-size:20px;color:var(--gray-text);cursor:grab;padding:0 2px;line-height:1;flex-shrink:0}
+.field-card-name{flex:1;padding:8px 10px;border:1px solid var(--gray-border);border-radius:8px;font-size:14px;outline:none;min-width:0}
+.field-card-name:focus{border-color:var(--teal)}
+.field-card-row2{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.field-card-type{flex:1;max-width:130px;padding:7px 8px;border:1px solid var(--gray-border);border-radius:8px;font-size:13px;outline:none;background:var(--white)}
+.field-card-del{margin-left:auto;background:var(--red-light);color:var(--red);border:1px solid var(--red);border-radius:8px;padding:6px 12px;font-size:13px;cursor:pointer;white-space:nowrap}
+.field-card-row3{display:flex;gap:20px;align-items:center}
+.field-card-check{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-sub);cursor:pointer}
+.field-card-check input{width:17px;height:17px;cursor:pointer;accent-color:var(--teal);flex-shrink:0}
+.field-card-fixed{font-size:11px;color:var(--gray-text);background:var(--gray-bg);border-radius:6px;padding:3px 8px;margin-left:auto}
+/* hide table on mobile, show cards */
+@media(max-width:768px){
+  #fields-table{display:none}
+  #fields-cards{display:block}
+}
+@media(min-width:769px){
+  #fields-table{display:table}
+  #fields-cards{display:none}
+}
 
 /* ── Responsive ── */
 @media(max-width:520px){
@@ -544,6 +567,8 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:poin
           </tr></thead>
           <tbody id="fields-tbody"></tbody>
         </table>
+        <!-- 手機版卡片 -->
+        <div id="fields-cards"></div>
         <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
           <button class="btn btn-sm btn-primary" onclick="addFieldRow()">＋ 新增欄位</button>
         </div>
@@ -870,46 +895,100 @@ function getFields(){
       ];
 }
 
-// ── 後台：渲染欄位管理表格 ────────────────────────
+// ── 後台：渲染欄位管理（桌機表格 + 手機卡片）────
 let _dragSrcIdx=null;
 function renderFieldsTable(){
   const fields=getFields();
-  const tbody=$('fields-tbody'); if(!tbody) return;
-  tbody.innerHTML=fields.map((f,i)=>{
+
+  // ── 桌機 table ────────────────────────────────
+  const tbody=$('fields-tbody');
+  if(tbody){
+    tbody.innerHTML=fields.map((f,i)=>{
+      const isFixed=_fixedKeys.includes(f.key);
+      const typeOpts=['text','tel','email','textarea'].map(t=>
+        `<option value="${t}"${f.type===t?' selected':''}>${t}</option>`).join('');
+      return `<tr class="field-drag-row" draggable="true"
+          ondragstart="fieldDragStart(${i})"
+          ondragover="fieldDragOver(event,${i})"
+          ondrop="fieldDrop(event,${i})"
+          ondragend="fieldDragEnd()">
+        <td style="text-align:center;padding:6px 4px;color:var(--gray-text);font-size:16px;cursor:grab">⠿</td>
+        <td style="padding:4px 6px">
+          <input type="text" value="${f.label}" placeholder="欄位名稱"
+            style="width:100%;padding:4px 6px;border:1px solid var(--gray-border);border-radius:6px;font-size:12px;outline:none"
+            oninput="updateField(${i},'label',this.value)">
+          ${isFixed?'<span style="font-size:10px;color:var(--gray-text)">（固定）</span>':''}
+        </td>
+        <td style="padding:4px 2px">
+          ${isFixed?`<span style="font-size:11px;color:var(--gray-text);padding:3px 6px">${f.type}</span>`
+            :`<select style="width:100%;padding:3px 4px;border:1px solid var(--gray-border);border-radius:6px;font-size:11px;outline:none"
+              onchange="updateField(${i},'type',this.value)">${typeOpts}</select>`}
+        </td>
+        <td style="text-align:center;padding:4px">
+          <input type="checkbox" ${f.visible?'checked':''} ${isFixed?'disabled':''}
+            onchange="updateField(${i},'visible',this.checked);renderFieldsTable()">
+        </td>
+        <td style="text-align:center;padding:4px">
+          <input type="checkbox" ${f.required?'checked':''} ${!f.visible||isFixed?'disabled':''}
+            onchange="updateField(${i},'required',this.checked)">
+        </td>
+        <td style="text-align:center;padding:4px">
+          ${isFixed?'':
+            `<button type="button" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:15px;padding:0 2px"
+              onclick="removeField(${i})">✕</button>`}
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  // ── 手機 cards ────────────────────────────────
+  const cards=$('fields-cards');
+  if(!cards) return;
+  cards.innerHTML=fields.map((f,i)=>{
     const isFixed=_fixedKeys.includes(f.key);
     const typeOpts=['text','tel','email','textarea'].map(t=>
       `<option value="${t}"${f.type===t?' selected':''}>${t}</option>`).join('');
-    return `<tr class="field-drag-row" draggable="true"
+    const visDisabled=isFixed?'disabled':'';
+    const reqDisabled=(!f.visible||isFixed)?'disabled':'';
+    return `<div class="field-card" id="fcard-${i}"
+        draggable="true"
         ondragstart="fieldDragStart(${i})"
         ondragover="fieldDragOver(event,${i})"
         ondrop="fieldDrop(event,${i})"
         ondragend="fieldDragEnd()">
-      <td style="text-align:center;padding:6px 4px;color:var(--gray-text);font-size:16px;cursor:grab">⠿</td>
-      <td style="padding:4px 6px">
-        <input type="text" value="${f.label}" placeholder="欄位名稱"
-          style="width:100%;padding:4px 6px;border:1px solid var(--gray-border);border-radius:6px;font-size:12px;outline:none"
+      <!-- Row 1: 拖曳 handle + 欄位名稱 -->
+      <div class="field-card-row1">
+        <span class="field-card-drag">⠿</span>
+        <input class="field-card-name" type="text" value="${f.label}" placeholder="欄位名稱"
           oninput="updateField(${i},'label',this.value)">
-        ${isFixed?'<span style="font-size:10px;color:var(--gray-text)">（固定）</span>':''}
-      </td>
-      <td style="padding:4px 2px">
-        <select style="width:100%;padding:3px 4px;border:1px solid var(--gray-border);border-radius:6px;font-size:11px;outline:none"
-          onchange="updateField(${i},'type',this.value)">${typeOpts}</select>
-      </td>
-      <td style="text-align:center;padding:4px">
-        <input type="checkbox" ${f.visible?'checked':''} ${isFixed?'disabled':''}
-          onchange="updateField(${i},'visible',this.checked);renderFieldsTable()">
-      </td>
-      <td style="text-align:center;padding:4px">
-        <input type="checkbox" ${f.required?'checked':''} ${!f.visible||isFixed?'disabled':''}
-          onchange="updateField(${i},'required',this.checked)">
-      </td>
-      <td style="text-align:center;padding:4px">
-        ${isFixed?'':
-          `<button type="button" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:15px;padding:0 2px"
-            onclick="removeField(${i})">✕</button>`}
-      </td>
-    </tr>`;
+        ${isFixed?'<span class="field-card-fixed">固定</span>':''}
+      </div>
+      <!-- Row 2: 類型 + 刪除 -->
+      <div class="field-card-row2">
+        ${isFixed
+          ?`<span style="font-size:12px;color:var(--gray-text);padding:4px 2px">${f.type}</span>`
+          :`<select class="field-card-type" onchange="updateField(${i},'type',this.value)">${typeOpts}</select>`}
+        ${isFixed?'<span style="flex:1"></span>':`<button type="button" class="field-card-del"
+            onclick="removeFieldConfirm(${i})">🗑 刪除</button>`}
+      </div>
+      <!-- Row 3: 顯示 + 必填 -->
+      <div class="field-card-row3">
+        <label class="field-card-check">
+          <input type="checkbox" ${f.visible?'checked':''} ${visDisabled}
+            onchange="updateField(${i},'visible',this.checked);renderFieldsTable()">
+          顯示
+        </label>
+        <label class="field-card-check">
+          <input type="checkbox" ${f.required?'checked':''} ${reqDisabled}
+            onchange="updateField(${i},'required',this.checked)">
+          必填
+        </label>
+      </div>
+    </div>`;
   }).join('');
+
+  // Touch 拖曳排序（手機）
+  _initTouchDrag();
 }
 function updateField(i,key,val){
   const fields=getFields();
@@ -929,6 +1008,54 @@ function removeField(i){
   fields.splice(i,1);
   settings.fields=fields;
   renderFieldsTable();
+}
+function removeFieldConfirm(i){
+  const fields=getFields();
+  const f=fields[i];
+  if(!f||_fixedKeys.includes(f.key)) return;
+  if(!confirm(`確定刪除「${f.label}」欄位？`)) return;
+  removeField(i);
+}
+
+// ── Touch 拖曳排序（手機卡片）────────────────────
+function _initTouchDrag(){
+  const cards=$('fields-cards'); if(!cards) return;
+  let touchSrcIdx=null, touchClone=null, startY=0;
+  Array.from(cards.querySelectorAll('.field-card')).forEach((card,i)=>{
+    const handle=card.querySelector('.field-card-drag');
+    if(!handle) return;
+    handle.addEventListener('touchstart',e=>{
+      touchSrcIdx=i; startY=e.touches[0].clientY;
+      card.style.opacity='.5';
+      e.preventDefault();
+    },{passive:false});
+    handle.addEventListener('touchmove',e=>{
+      if(touchSrcIdx===null) return;
+      e.preventDefault();
+      const y=e.touches[0].clientY;
+      const els=Array.from(cards.querySelectorAll('.field-card'));
+      let targetIdx=touchSrcIdx;
+      els.forEach((el,idx)=>{
+        const rect=el.getBoundingClientRect();
+        if(y>rect.top&&y<rect.bottom) targetIdx=idx;
+      });
+      if(targetIdx!==touchSrcIdx){
+        const fields=getFields();
+        const [moved]=fields.splice(touchSrcIdx,1);
+        fields.splice(targetIdx,0,moved);
+        settings.fields=fields;
+        touchSrcIdx=targetIdx;
+        renderFieldsTable();
+      }
+    },{passive:false});
+    handle.addEventListener('touchend',()=>{
+      if(touchSrcIdx!==null){
+        const els=cards.querySelectorAll('.field-card');
+        if(els[touchSrcIdx]) els[touchSrcIdx].style.opacity='1';
+        touchSrcIdx=null;
+      }
+    });
+  });
 }
 // 拖曳排序
 function fieldDragStart(i){ _dragSrcIdx=i; }
@@ -2137,7 +2264,7 @@ Object.assign(window,{
   toggleOrderField,updateOrderNote,
   renderDiscountAdmin,addDiscRule,removeDiscRule,discField,saveDiscounts,
   openPayModal,editPayMethod,savePayMethod,deletePayMethod,togglePayFields,
-  saveSettings,addFieldRow,removeField,updateField,fieldDragStart,fieldDragOver,fieldDrop,fieldDragEnd,closeModal,batchDeleteOrders
+  saveSettings,addFieldRow,removeField,removeFieldConfirm,updateField,fieldDragStart,fieldDragOver,fieldDrop,fieldDragEnd,closeModal,batchDeleteOrders
 });
 
 // ── Init ──────────────────────────────────────────
