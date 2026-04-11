@@ -746,6 +746,21 @@ let settings   = {
   ]
 };
 let cart = {}, selectedCvs='', selectedPay='', isAdmin=false;
+
+// ── 購物車持久化 ──────────────────────────────────
+function saveCart(){
+  try{ localStorage.setItem('zdayyyy_cart', JSON.stringify(cart)); }catch(e){}
+}
+function loadCart(){
+  try{
+    const raw=localStorage.getItem('zdayyyy_cart');
+    if(raw) cart=JSON.parse(raw);
+  }catch(e){ cart={}; }
+}
+function clearCart(){
+  cart={};
+  try{ localStorage.removeItem('zdayyyy_cart'); }catch(e){}
+}
 let storeSearch = '';
 let storeStep = 'products';
 let selectedProductIds = new Set();
@@ -1397,12 +1412,13 @@ function confirmAddToCart(){
   } else {
     cart[cartKey]=entry;
   }
+  saveCart();
   closeModal('modal-cart');
   renderStore(); renderCart();
   showToast('✓ 已加入購物車：'+p.name);
 }
 
-function removeFromCart(docId){ delete cart[docId]; renderStore(); renderCart(); }
+function removeFromCart(docId){ delete cart[docId]; saveCart(); renderStore(); renderCart(); }
 
 // ── Cart rendering ────────────────────────────────
 function calcShip(sub){ const t=Number(settings.freeShip)||0; return (t>0&&sub>=t)?0:(Number(settings.ship)||0); }
@@ -1491,7 +1507,10 @@ function renderPayInfo(){
     if(m.bank) h+=`<div class="ti-row"><span class="ti-label">銀行</span><span class="ti-val">${m.bank}</span></div>`;
     if(m.acct) h+=`<div class="ti-row"><span class="ti-label">帳號</span><span class="ti-val">${m.acct}</span></div>`;
   }
-  if(m.type==='jkos'&&m.qr) h+=`<img src="${m.qr}" class="qr-img" alt="街口 QR Code">`;
+  // 只要有 qr 網址就顯示，不限類型
+  if(m.qr) h+=`<img src="${m.qr}" class="qr-img" alt="QR Code"
+    onerror="this.style.display='none';this.nextSibling&&(this.nextSibling.textContent='（圖片載入失敗，請確認網址是否正確）')">
+    <span style="font-size:11px;color:var(--ft-sub)"></span>`;
   if(m.note) h+=`<div class="ti-note">${m.note.replace(/\n/g,'<br>')}</div>`;
   h+='</div>'; el.innerHTML=h;
 }
@@ -1567,7 +1586,7 @@ async function submitOrder(){
     const sb=$('success-box'); sb.style.display='block';
     $('success-order-no').textContent='訂單編號：'+orderNo;
     $('success-msg').textContent=settings.successMsg||'感謝您的訂購！';
-    cart={}; updateCartCount();
+    cart={}; clearCart(); updateCartCount();
   }catch(e){ alert('❌ 下單失敗：'+e.message); }
   loading(false);
 }
@@ -2277,6 +2296,7 @@ Object.assign(window,{
 
 // ── Init ──────────────────────────────────────────
 async function init(){
+  loadCart(); // 從 localStorage 還原購物車
   try{
     await loadPublicData();
   }catch(e){
