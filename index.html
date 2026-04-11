@@ -1558,14 +1558,6 @@ function openProductModal(docId=null){
   $('modal-product').classList.add('open');
 }
 
-function renderImgThumbs(){
-  $('img-thumbs').innerHTML=pendingImgs.map((img,i)=>`
-    <div class="img-thumb">
-      <img src="${img.url}" alt="">
-      <button class="img-thumb-del" onclick="removeImg(${i})">✕</button>
-    </div>`).join('');
-}
-
 function removeImg(i){ pendingImgs.splice(i,1); renderImgThumbs(); }
 
 // ── 圖片管理：支援直接上傳（Firebase Storage）＆ 網址 ──
