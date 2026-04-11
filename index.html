@@ -102,7 +102,7 @@ body{font-family:'Apple SD Gothic Neo',-apple-system,BlinkMacSystemFont,'Segoe U
 
 /* ── PRODUCT GRID ── */
 .product-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:16px;margin-bottom:2rem}
-.p-card{background:var(--ft-card);border:1px solid var(--ft-border);border-radius:var(--ft-radius);overflow:hidden;transition:box-shadow .25s,transform .2s;position:relative;cursor:pointer}
+.p-card{background:var(--ft-card);border:1px solid var(--ft-border);border-radius:var(--ft-radius);overflow:hidden;transition:box-shadow .25s,transform .2s;position:relative;cursor:pointer;display:flex;flex-direction:column}
 .p-card:hover{box-shadow:var(--ft-shadow-hover);transform:translateY(-3px)}
 .p-card.in-cart{border-color:var(--ft-gold);box-shadow:0 0 0 2px var(--ft-gold-light)}
 /* Image */
@@ -117,7 +117,7 @@ body{font-family:'Apple SD Gothic Neo',-apple-system,BlinkMacSystemFont,'Segoe U
 .p-img-dot{width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,.5)}
 .p-img-dot.active{background:#fff}
 /* Card body */
-.p-body{padding:10px 11px 11px;display:flex;flex-direction:column;min-height:110px}
+.p-body{padding:10px 11px 11px;display:flex;flex-direction:column;flex:1}
 .p-name{font-size:13px;font-weight:600;line-height:1.3;color:var(--ft-text);letter-spacing:.02em}
 .p-cat{font-size:10px;color:var(--ft-sub);margin-top:2px;letter-spacing:.04em;text-transform:uppercase}
 .p-orig-price{font-size:11px;color:var(--ft-sub);text-decoration:line-through;margin-top:3px}
@@ -125,11 +125,10 @@ body{font-family:'Apple SD Gothic Neo',-apple-system,BlinkMacSystemFont,'Segoe U
 .p-tag{display:inline-block;font-size:10px;padding:2px 8px;border-radius:10px;margin-top:3px;font-weight:500;letter-spacing:.03em}
 .tag-hot{background:#FDF0E6;color:#A8845A}
 .tag-new{background:#EAF3EE;color:#3D7A5A}
-.p-add-btn{margin-top:auto;padding-top:8px;width:100%;padding:8px;background:var(--ft-gold);color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:12px;font-weight:600;letter-spacing:.05em;transition:background .2s;margin-top:auto}
+.p-add-btn{margin-top:auto;width:100%;padding:8px;background:var(--ft-gold);color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:12px;font-weight:600;letter-spacing:.05em;transition:background .2s}
 .p-add-btn:hover{background:#96733F}
 .p-add-btn.in-cart-btn{background:#3D7A5A}
-.cart-badge-card{position:absolute;top:8px;right:8px;background:var(--ft-gold);color:#fff;border-radius:50%;width:22px;height:22px;font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:700;z-index:2}
-/* Arrows */
+/* Arrow */
 .p-slide-prev,.p-slide-next{position:absolute;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.8);color:var(--ft-text);border:none;border-radius:50%;width:24px;height:24px;font-size:14px;cursor:pointer;display:none;align-items:center;justify-content:center;z-index:3}
 .p-card:hover .p-slide-prev,.p-card:hover .p-slide-next{display:flex}
 .p-slide-prev{left:4px}.p-slide-next{right:4px}
@@ -341,12 +340,15 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:poin
         <button class="btn-ft-outline" type="button" onclick="goProductStep()">← 返回商品區</button>
       </div>
       <div class="section-label">基本資料</div>
-      <div class="field"><label>姓名 *</label><input type="text" id="c-name" placeholder="請輸入姓名"></div>
-      <div class="field-row">
-        <div class="field"><label>聯絡電話 *</label><input type="tel" id="c-phone" placeholder="09xx-xxxxxx"></div>
-        <div class="field"><label>Instagram 帳號</label><input type="text" id="c-ig" placeholder="@zdayyyy"></div>
+      <div id="dynamic-form-fields">
+        <!-- 由 applySettings() 動態渲染 -->
+        <div class="field"><label>姓名 *</label><input type="text" id="c-name" placeholder="請輸入姓名"></div>
+        <div class="field-row">
+          <div class="field"><label>聯絡電話 *</label><input type="tel" id="c-phone" placeholder="09xx-xxxxxx"></div>
+          <div class="field" id="c-ig-wrap"><label>Instagram 帳號</label><input type="text" id="c-ig" placeholder="@zdayyyy"></div>
+        </div>
+        <div class="field" id="c-email-wrap" style="display:none"><label id="c-email-label">Email</label><input type="email" id="c-email" placeholder="your@email.com"></div>
       </div>
-      <div class="field" id="c-email-wrap" style="display:none"><label id="c-email-label">Email</label><input type="email" id="c-email" placeholder="your@email.com"></div>
       <div class="section-label">取貨資訊</div>
       <div class="field"><label>超商選擇 *</label></div>
       <div class="cvs-select">
@@ -355,13 +357,13 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:poin
       </div>
       <div class="field-row">
         <div class="field"><label>門市名稱 *</label><input type="text" id="c-store-name" placeholder="例：信義門市"></div>
-        <div class="field"><label>店號／地址（選填）</label><input type="text" id="c-store-no" placeholder="例：168899"></div>
+        <div class="field" id="c-store-no-wrap"><label>店號／地址（選填）</label><input type="text" id="c-store-no" placeholder="例：168899"></div>
       </div>
       <div class="section-label">付款方式</div>
       <div class="pay-list" id="pay-list"></div>
       <div id="pay-info-area"></div>
       <div class="section-label">其他</div>
-      <div class="field"><label>備註（選填）</label><input type="text" id="c-note" placeholder="色號備注、特殊需求…"></div>
+      <div class="field" id="c-note-wrap"><label>備註（選填）</label><input type="text" id="c-note" placeholder="色號備注、特殊需求…"></div>
       <div class="pay-reminder-box hidden" id="pay-reminder-box"></div>
       <button class="btn-ft-primary" id="btn-submit" onclick="submitOrder()">確認下單</button>
     </div>
@@ -444,7 +446,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:poin
       <div class="toolbar-right"><button class="btn btn-sm btn-primary" onclick="openProductModal()">＋ 新增商品</button></div>
     </div>
     <div class="tbl-wrap"><table>
-      <thead><tr><th style="width:36px"></th><th>圖片</th><th>商品名稱</th><th>分類</th><th>售價</th><th>原價</th><th>G.DIA</th><th>度數模式</th><th>狀態</th><th>操作</th></tr></thead>
+      <thead><tr><th style="width:36px"></th><th>圖片</th><th>商品名稱</th><th>品牌</th><th>分類</th><th>售價</th><th>原價</th><th>G.DIA</th><th>度數模式</th><th>狀態</th><th>操作</th></tr></thead>
       <tbody id="product-tbody"></tbody>
     </table></div>
   </div>
@@ -459,6 +461,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:poin
       <span id="order-batch-count">已選 0 筆</span>
       <button class="btn btn-sm btn-primary" onclick="batchOrderStatus('paid',true)">批次標記已付款</button>
       <button class="btn btn-sm btn-primary" onclick="batchOrderStatus('shipped',true)">批次標記已出貨</button>
+      <button class="btn btn-sm btn-danger" onclick="batchDeleteOrders()">🗑 批次刪除</button>
       <button class="btn btn-sm" onclick="clearOrderSel()">取消選擇</button>
     </div>
     <div class="toolbar">
@@ -540,7 +543,18 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:poin
         <div class="field"><label>Email 欄位標籤文字</label><input type="text" id="cfg-email-label" placeholder="Email（出貨通知用）"></div>
       </div>
       <div class="settings-section">
-        <h3>🔑 密碼管理</h3>
+        <h3>📝 前台欄位控制</h3>
+        <p style="font-size:12px;color:var(--gray-text);margin-bottom:10px">控制前台訂購表單中各欄位的顯示與必填狀態</p>
+        <table style="width:100%;font-size:13px;border-collapse:collapse">
+          <thead><tr style="background:var(--gray-bg)">
+            <th style="padding:6px 8px;text-align:left;font-weight:500;color:var(--text-sub)">欄位</th>
+            <th style="padding:6px 8px;text-align:center;font-weight:500;color:var(--text-sub)">顯示</th>
+            <th style="padding:6px 8px;text-align:center;font-weight:500;color:var(--text-sub)">必填</th>
+          </tr></thead>
+          <tbody id="field-ctrl-tbody"></tbody>
+        </table>
+        <button class="btn btn-primary" style="margin-top:12px" onclick="saveFieldConfig()">💾 儲存欄位設定</button>
+      </div>
         <p style="font-size:13px;color:var(--text-sub);line-height:1.7">登入密碼請至 <b>Firebase Console → Authentication</b> 修改。</p>
       </div>
       <button class="btn btn-primary btn-full" onclick="saveSettings()">💾 儲存所有設定</button>
@@ -555,6 +569,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:poin
     <input type="hidden" id="edit-id">
     <div class="form-grid">
       <div class="field span2"><label>商品名稱 *</label><input type="text" id="f-name" placeholder="例：1-DAY ACUVUE MOIST"></div>
+      <div class="field"><label>品牌</label><input type="text" id="f-brand" placeholder="例：Johnson & Johnson"></div>
       <div class="field"><label>分類</label><input type="text" id="f-cat" placeholder="日拋、月拋、彩片…"></div>
       <div class="field"><label>售價（NT$）*</label><input type="number" id="f-price" placeholder="490"></div>
       <div class="field"><label>原價（NT$，選填）</label><input type="number" id="f-orig-price" placeholder="590"></div>
@@ -682,7 +697,16 @@ let settings   = {
   ship:60, freeShip:1200, freeShipText:'消費滿 NT$1,200 免運費！', shipLabel:'超商運費',
   payReminder:'請於 48 小時內完成付款，付款後請截圖傳至 IG 私訊通知我們 🙏',
   successMsg:'感謝您的訂購！\n我們將盡快確認並處理您的訂單。\n如有問題歡迎 IG 私訊詢問 💚',
-  emailShow:'0', emailLabel:'Email（出貨通知用）'
+  emailShow:'0', emailLabel:'Email（出貨通知用）',
+  // 前台欄位控制：每個欄位 { show: bool, required: bool }
+  fieldConfig:{
+    name:      {show:true,  required:true },
+    phone:     {show:true,  required:true },
+    ig:        {show:true,  required:false},
+    storeName: {show:true,  required:true },
+    storeNo:   {show:true,  required:false},
+    note:      {show:true,  required:false}
+  }
 };
 let cart = {}, selectedCvs='', selectedPay='', isAdmin=false;
 let storeSearch = '';
@@ -812,6 +836,7 @@ function applySettings(){
   if(es!=='0'){
     $('c-email-label').textContent=(settings.emailLabel||'Email')+(es==='2'?' *':'（選填）');
   }
+  applyFieldConfig();
 }
 
 function loadSettingsForm(){
@@ -844,6 +869,66 @@ async function saveSettings(){
   catch(e){ alert('❌ 儲存失敗：'+e.message); }
   loading(false);
 }
+
+// ── 前台欄位控制 ──────────────────────────────────
+const _fieldDefs=[
+  {key:'name',      label:'姓名',           canToggle:false},
+  {key:'phone',     label:'聯絡電話',        canToggle:false},
+  {key:'ig',        label:'Instagram 帳號',  canToggle:true},
+  {key:'storeName', label:'門市名稱',         canToggle:false},
+  {key:'storeNo',   label:'店號／地址',       canToggle:true},
+  {key:'note',      label:'備註',            canToggle:true},
+];
+function renderFieldCtrlTable(){
+  const fc=settings.fieldConfig||{};
+  $('field-ctrl-tbody').innerHTML=_fieldDefs.map(f=>{
+    const cfg=fc[f.key]||{show:true,required:false};
+    const disabledShow=!f.canToggle?'disabled':''
+    const disabledReq=!cfg.show?'disabled':'';
+    return `<tr style="border-bottom:1px solid var(--gray-border)">
+      <td style="padding:7px 8px">${f.label}${!f.canToggle?'<span style="font-size:10px;color:var(--gray-text);margin-left:4px">（固定）</span>':''}</td>
+      <td style="text-align:center;padding:7px 8px"><input type="checkbox" id="fc-show-${f.key}" ${cfg.show?'checked':''} ${disabledShow} onchange="onFcChange('${f.key}')"></td>
+      <td style="text-align:center;padding:7px 8px"><input type="checkbox" id="fc-req-${f.key}" ${cfg.required?'checked':''} ${disabledReq}></td>
+    </tr>`;
+  }).join('');
+}
+function onFcChange(key){
+  const showEl=$(`fc-show-${key}`), reqEl=$(`fc-req-${key}`);
+  if(!showEl.checked){ reqEl.checked=false; reqEl.disabled=true; }
+  else reqEl.disabled=false;
+}
+async function saveFieldConfig(){
+  const fc={};
+  _fieldDefs.forEach(f=>{
+    fc[f.key]={
+      show: $(`fc-show-${f.key}`)?.checked ?? true,
+      required: $(`fc-req-${f.key}`)?.checked ?? false
+    };
+  });
+  // name/phone/storeName 永遠顯示且必填
+  ['name','phone','storeName'].forEach(k=>{ fc[k]={show:true,required:true}; });
+  settings.fieldConfig=fc;
+  loading(true);
+  try{ await setDoc(doc(db,'store','settings'),settings); applyFieldConfig(); alert('✅ 欄位設定已儲存！'); }
+  catch(e){ alert('❌ 儲存失敗：'+e.message); }
+  loading(false);
+}
+function applyFieldConfig(){
+  // 依 fieldConfig 控制各欄位 visibility（動態欄位已在 HTML 預置，這裡控制顯示）
+  const fc=settings.fieldConfig||{};
+  const _ctrl=(key,wrapId,labelId,suffix)=>{
+    const cfg=fc[key]||{show:true,required:false};
+    const wrap=$(wrapId); if(!wrap) return;
+    wrap.style.display=cfg.show?'':'none';
+    if(labelId){
+      const lbl=$(labelId); if(lbl) lbl.textContent=(suffix||'')+(cfg.required?' *':'（選填）');
+    }
+  };
+  _ctrl('ig',     'c-ig-wrap',    null);
+  _ctrl('storeNo','c-store-no-wrap',null);
+  _ctrl('note',   'c-note-wrap',  null);
+}
+
 
 // ── Discount logic ────────────────────────────────
 function calcDiscount(cartItems){
@@ -1036,7 +1121,7 @@ function confirmAddToCart(){
     if(!sel){ alert('請選擇顏色'); return; }
     color=sel.textContent.trim();
   }
-  let entry={name:p.name,cat:p.cat,price:p.price,qty,color,mode:p.degMode,docId,descProd:p.descProd||''};
+  let entry={name:p.name,brand:p.brand||'',cat:p.cat,price:p.price,qty,color,mode:p.degMode,docId,descProd:p.descProd||''};
   let powerDisplay='';
   if(p.degMode==='lr'){
     const L=$('deg-L')?.value, R=$('deg-R')?.value;
@@ -1158,15 +1243,21 @@ function renderPayInfo(){
 
 // ── Submit order ──────────────────────────────────
 async function submitOrder(){
-  const name=$('c-name').value.trim(), phone=$('c-phone').value.trim(), ig=$('c-ig').value.trim();
+  const fc=settings.fieldConfig||{};
+  const name=$('c-name').value.trim(), phone=$('c-phone').value.trim();
+  const ig=(fc.ig?.show!==false)?$('c-ig').value.trim():'';
   const email=$('c-email').value.trim();
-  const storeName=$('c-store-name').value.trim(), storeNo=$('c-store-no').value.trim();
-  const note=$('c-note').value.trim(), cartItems=Object.values(cart);
+  const storeName=$('c-store-name').value.trim();
+  const storeNo=(fc.storeNo?.show!==false)?$('c-store-no').value.trim():'';
+  const note=(fc.note?.show!==false)?($('c-note').value.trim()):'';
+  const cartItems=Object.values(cart);
   if(!name) return alert('請填寫姓名');
   if(!phone) return alert('請填寫聯絡電話');
+  if(fc.ig?.required&&!ig) return alert('請填寫 Instagram 帳號');
   if(settings.emailShow==='2'&&!email) return alert('請填寫 Email');
   if(!selectedCvs) return alert('請選擇取貨超商');
   if(!storeName) return alert('請填寫取貨門市名稱');
+  if(fc.storeNo?.required&&!storeNo) return alert('請填寫店號／地址');
   if(!cartItems.length) return alert('請選擇至少一項商品');
   if(!selectedPay) return alert('請選擇付款方式');
   const payM=payMethods.find(p=>p._docId===selectedPay);
@@ -1181,10 +1272,10 @@ async function submitOrder(){
     orderNo,time,name,phone,ig,email,cvs:selectedCvs,storeName,storeNo,
     payMethod:payM?.name||'',
     items:cartItems.map(i=>({
-      name:i.name, color:i.color||'', powerDisplay:i.powerDisplay||'',
+      name:i.name, brand:i.brand||'', color:i.color||'', powerDisplay:i.powerDisplay||'',
       qty:i.qty, price:i.price, subtotal:i.price*i.qty
     })),
-    subtotal:sub, ship, discAmt, discLabel, total, note,
+    subtotal:sub, ship, discAmt, discLabel, total, note:note||'',
     paid:false, shipped:false, shippedDate:'', noteAccount:'', noteShip:''
   };
   loading(true);
@@ -1235,7 +1326,7 @@ function switchTab(tab){
   if(tab==='orders')   renderOrderTable();
   if(tab==='discount') renderDiscountAdmin();
   if(tab==='payment')  renderPayMethodList();
-  if(tab==='settings') loadSettingsForm();
+  if(tab==='settings'){ loadSettingsForm(); renderFieldCtrlTable(); }
   refreshStats();
 }
 
@@ -1260,6 +1351,7 @@ function renderProductTable(q=''){
       <td><input type="checkbox" ${chk?'checked':''} onchange="toggleProductSel('${p._docId}',this.checked)"></td>
       <td>${imgH}</td>
       <td><b>${p.name}</b>${p.descProd?`<br><span style="font-size:11px;color:var(--gray-text)">${p.descProd.slice(0,30)}</span>`:''}</td>
+      <td>${p.brand||'-'}</td>
       <td>${p.cat||'-'}</td>
       <td>NT$${Number(p.price).toLocaleString()}</td>
       <td>${p.origPrice?'NT$'+Number(p.origPrice).toLocaleString():'-'}</td>
@@ -1282,7 +1374,7 @@ function openProductModal(docId=null){
   pendingImgs=[];
   if(docId){
     const p=products.find(x=>x._docId===docId);
-    $('f-name').value=p.name; $('f-cat').value=p.cat||''; $('f-price').value=p.price;
+    $('f-name').value=p.name; $('f-brand').value=p.brand||''; $('f-cat').value=p.cat||''; $('f-price').value=p.price;
     $('f-orig-price').value=p.origPrice||''; $('f-colors').value=p.colors||'';
     $('f-gdia').value=p.gdia||'';
     $('f-desc-prod').value=p.descProd||'';
@@ -1290,7 +1382,7 @@ function openProductModal(docId=null){
     $('f-deg-mode').value=p.degMode||'single'; $('f-powers').value=p.powers||'';
     pendingImgs=(p.images||[]).map(u=>({url:u,isNew:false}));
   } else {
-    ['f-name','f-cat','f-price','f-orig-price','f-colors','f-gdia','f-desc-prod','f-powers'].forEach(f=>$(f).value='');
+    ['f-name','f-brand','f-cat','f-price','f-orig-price','f-colors','f-gdia','f-desc-prod','f-powers'].forEach(f=>$(f).value='');
     $('f-tag').value=''; $('f-active').value='1'; $('f-deg-mode').value='single';
   }
   renderImgThumbs();
@@ -1372,7 +1464,7 @@ async function saveProduct(){
   if(!price) return alert('請填寫售價');
   const docId=$('edit-id').value;
   const obj={
-    name, cat:$('f-cat').value.trim(), price,
+    name, brand:$('f-brand').value.trim(), cat:$('f-cat').value.trim(), price,
     origPrice:parseFloat($('f-orig-price').value)||0,
     colors:$('f-colors').value.trim(),
     gdia:$('f-gdia').value.trim(),
@@ -1581,55 +1673,124 @@ async function batchOrderStatus(field, val){
   loading(false);
 }
 
-// ── Order lookup (front) ──────────────────────────
+// ── 批次刪除訂單 ──────────────────────────────────
+async function batchDeleteOrders(){
+  if(!selectedOrderIds.size) return;
+  const n=selectedOrderIds.size;
+  if(!confirm(`確定刪除已勾選的 ${n} 筆訂單？此操作無法復原。`)) return;
+  loading(true);
+  try{
+    const ids=[...selectedOrderIds];
+    for(const docId of ids){
+      await deleteDoc(doc(db,'orders',docId));
+    }
+    orders=orders.filter(o=>!ids.includes(o._docId));
+    clearOrderSel();
+    renderOrderTable();
+    alert(`✅ 已刪除 ${n} 筆訂單`);
+  }catch(e){ alert('❌ 刪除失敗：'+e.message); }
+  loading(false);
+}
+
+// ── Order lookup (front) — 完全匹配，防止查到他人訂單 ──
 async function doLookup(){
   const q=$('lookup-input').value.trim();
-  if(!q){ alert('請輸入查詢關鍵字'); return; }
   const el=$('lookup-result');
+  if(!q){ el.innerHTML='<div style="color:var(--ft-sub);font-size:13px;text-align:center;padding:12px">請輸入查詢關鍵字</div>'; return; }
+
+  // ── 格式驗證 ──────────────────────────────────────
+  const isPhone=/^\d{10}$/.test(q);                        // 純10碼數字
+  const isOrderNo=/^ZD\d{6}-\d{4}$/.test(q);              // ZD250411-1234
+  const isIG=/^@/.test(q)||/^[a-zA-Z0-9._]{1,30}$/.test(q); // IG帳號
+
+  // 若看起來像電話但不是10碼，拒絕
+  if(/^\d+$/.test(q) && !isPhone){
+    el.innerHTML=`<div style="color:var(--red);font-size:13px;padding:12px;text-align:center">電話號碼需輸入完整 10 碼（例：0912345678）</div>`;
+    return;
+  }
+  // 若看起來像訂單編號但格式不對，拒絕
+  if(q.startsWith('ZD') && !isOrderNo){
+    el.innerHTML=`<div style="color:var(--red);font-size:13px;padding:12px;text-align:center">訂單編號格式不正確（例：ZD250411-1234）</div>`;
+    return;
+  }
+
   el.innerHTML='<div style="text-align:center;color:var(--gray-text);padding:12px">查詢中…</div>';
   try{
     const snap=await getDocs(collection(db,'orders'));
     const allDocs=[];
     snap.forEach(d=>allDocs.push({...d.data(),_docId:d.id}));
-    const results=allDocs.filter(o=>
-      (o.orderNo||'').includes(q)||(o.phone||'').includes(q)||(o.ig||'').includes(q)
-    );
+
+    // 完全匹配（不允許模糊搜尋）
+    const results=allDocs.filter(o=>{
+      if(isPhone)   return (o.phone||'').replace(/\D/g,'')=== q.replace(/\D/g,'');
+      if(isOrderNo) return (o.orderNo||'')=== q;
+      // IG帳號：去掉 @ 後完全匹配
+      const inputIG=q.replace(/^@/,'').toLowerCase();
+      const orderIG=(o.ig||'').replace(/^@/,'').toLowerCase();
+      return orderIG===inputIG && orderIG!=='';
+    });
+
     if(!results.length){
-      el.innerHTML='<div style="color:var(--gray-text);font-size:13px;text-align:center;padding:16px">找不到相關訂單</div>';
+      el.innerHTML='<div style="color:var(--ft-sub);font-size:13px;text-align:center;padding:16px">查無此訂單，請確認輸入是否正確</div>';
       return;
     }
     el.innerHTML=results.map(o=>{
       const paidBadge=o.paid?'<span class="status-badge status-paid">已付款</span>':'<span class="status-badge status-unpaid">未付款</span>';
       const shipBadge=o.shipped?`<span class="status-badge status-shipped">已出貨${o.shippedDate?' ('+o.shippedDate+')':''}</span>`:'<span class="status-badge status-unshipped">未出貨</span>';
       const itemsHtml=(o.items||[]).map(i=>`
-        <div style="font-size:12px;color:var(--text-sub);padding:3px 0;border-bottom:1px solid #f5f5f5">
+        <div style="font-size:12px;color:var(--ft-sub);padding:4px 0;border-bottom:1px solid var(--ft-border)">
           ${i.name}${i.color?' ・'+i.color:''}${i.powerDisplay?' ・'+i.powerDisplay:''} ×${i.qty}
-          <span style="float:right">NT$${(i.subtotal||0).toLocaleString()}</span>
+          <span style="float:right;font-weight:500">NT$${(i.subtotal||0).toLocaleString()}</span>
         </div>`).join('');
       return `<div class="lookup-result">
         <h4>訂單編號：${o.orderNo||'-'}</h4>
-        <div style="font-size:12px;color:var(--gray-text);margin-bottom:8px">下單時間：${o.time}</div>
+        <div style="font-size:12px;color:var(--ft-sub);margin-bottom:8px">下單時間：${o.time}</div>
         ${itemsHtml}
-        <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-          <span style="font-size:13px;font-weight:600">總金額 NT$${o.total.toLocaleString()}</span>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <span style="font-size:13px;font-weight:700;color:var(--ft-text)">總金額 NT$${o.total.toLocaleString()}</span>
           ${paidBadge} ${shipBadge}
         </div>
       </div>`;
     }).join('');
   }catch(e){
-    el.innerHTML=`<div style="color:var(--red);font-size:13px">查詢失敗：${e.message}</div>`;
+    el.innerHTML=`<div style="color:var(--red);font-size:13px;padding:12px">查詢失敗：${e.message}</div>`;
   }
 }
 
 function exportExcel(){
   if(!orders.length) return alert('目前沒有任何訂單');
-  const rows=[['訂單編號','時間','IG帳號','姓名','電話','Email','超商','門市名稱','店號','付款方式','商品名稱','商品顏色','商品度數','數量','單價','小計','運費','折扣','總金額','付款狀態','出貨狀態','出貨日期','查帳備註','出貨備註','訂單備註']];
-  orders.forEach(o=>{
+
+  // 匯出優先順序：① 勾選項目 → ② 日期篩選結果 → ③ 全部
+  let exportList;
+  if(selectedOrderIds.size>0){
+    // 有勾選：只匯出勾選的
+    exportList=orders.filter(o=>selectedOrderIds.has(o._docId));
+  } else {
+    // 無勾選：依日期篩選（若有）
+    const from=$('order-date-from')?.value||'';
+    const to=$('order-date-to')?.value||'';
+    if(from||to){
+      exportList=orders.filter(o=>{
+        const rawDate=(o.time||'').split(' ')[0];
+        const parts=rawDate.split('/');
+        const oDate=parts.length===3?`${parts[0]}-${parts[1].padStart(2,'0')}-${parts[2].padStart(2,'0')}`:'';
+        if(from&&oDate&&oDate<from) return false;
+        if(to&&oDate&&oDate>to) return false;
+        return true;
+      });
+    } else {
+      exportList=orders; // 無勾選也無篩選：全部
+    }
+  }
+  if(!exportList.length){ alert('沒有符合條件的訂單可匯出'); return; }
+
+  const rows=[['訂單編號','時間','IG帳號','姓名','電話','Email','超商','門市名稱','店號','付款方式','商品名稱','品牌','商品顏色','商品度數','數量','單價','小計','運費','折扣','總金額','付款狀態','出貨狀態','出貨日期','查帳備註','出貨備註','訂單備註']];
+  exportList.forEach(o=>{
     (o.items||[]).forEach(item=>{
       rows.push([
         o.orderNo||'', o.time, o.ig||'', o.name, o.phone, o.email||'',
         o.cvs||'', o.storeName||'', o.storeNo||'', o.payMethod||'',
-        item.name, item.color||'', item.powerDisplay||'',
+        item.name, item.brand||'', item.color||'', item.powerDisplay||'',
         item.qty, item.price||0, item.subtotal||0,
         o.ship===0?0:(o.ship||0), o.discAmt||0, o.total,
         o.paid?'已付款':'未付款', o.shipped?'已出貨':'未出貨',
@@ -1639,7 +1800,8 @@ function exportExcel(){
   });
   const ws=XLSX.utils.aoa_to_sheet(rows);
   const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'訂單');
-  XLSX.writeFile(wb,`Zdayyyy_訂單_${new Date().toLocaleDateString('zh-TW').replace(/\//g,'-')}.xlsx`);
+  const label=selectedOrderIds.size>0?`_勾選${selectedOrderIds.size}筆`:'';
+  XLSX.writeFile(wb,`Zdayyyy_訂單${label}_${new Date().toLocaleDateString('zh-TW').replace(/\//g,'-')}.xlsx`);
 }
 
 // ── Discount admin ────────────────────────────────
@@ -1777,11 +1939,11 @@ Object.assign(window,{
   handleImgSelect,removeImg,
   toggleProductSel,toggleProductSelAll,clearProductSel,batchProductActive,
   renderOrderTable,exportExcel,clearDateFilter,
-  toggleOrderSel,toggleOrderSelAll,clearOrderSel,batchOrderStatus,
+  toggleOrderSel,toggleOrderSelAll,clearOrderSel,batchOrderStatus,batchDeleteOrders,
   toggleOrderField,updateOrderNote,
   renderDiscountAdmin,addDiscRule,removeDiscRule,discField,saveDiscounts,
   openPayModal,editPayMethod,savePayMethod,deletePayMethod,togglePayFields,
-  saveSettings,closeModal
+  saveSettings,saveFieldConfig,onFcChange,closeModal,batchDeleteOrders
 });
 
 // ── Init ──────────────────────────────────────────
