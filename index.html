@@ -993,8 +993,8 @@ function renderOrderForm(){
       `<div class="field"><label>${f.label}${reqMark}</label>${inputHtml}</div>`);
   });
 
-  // 若「其他」區有內容才加 section-label（用唯一 class 方便清除）
-  if(c3&&c3.children.length){
+  // 若「其他」區有內容才加 section-label
+  if(c3&&c3.children.length&&c3.parentElement){
     const lbl=document.createElement('div');
     lbl.className='section-label dff-other-label';
     c3.parentElement.insertBefore(lbl,c3);
@@ -2151,23 +2151,44 @@ Object.assign(window,{
 
 // ── Init ──────────────────────────────────────────
 async function init(){
-  await loadPublicData();
-  applySettings(); renderStore(); renderPayList(); renderCart(); updateStoreStep('products');
+  try{
+    await loadPublicData();
+  }catch(e){
+    console.error('loadPublicData error:',e);
+  }
+  // 確保 loading 一定關掉，即使上面出錯
+  loading(false);
+
+  try{
+    applySettings();
+  }catch(e){ console.error('applySettings error:',e); }
+
+  try{
+    renderStore(); renderPayList(); renderCart(); updateStoreStep('products');
+  }catch(e){ console.error('render error:',e); }
+
   onAuthStateChanged(auth, async(user)=>{
-    loading(false);
-    if(user){
-      isAdmin=true;
-      $('nav-admin-link').style.display='none';
-      if(!orders.length) await loadAdminData();
-      if(window.location.hash==='#/admin'){ showPage('admin'); switchTab('products'); }
-      else showPage('store');
-    } else {
-      isAdmin=false;
-      $('nav-admin-link').style.display='';
-      if(window.location.hash==='#/admin') showPage('login');
-      else showPage('store');
+    loading(false); // 雙重保險
+    try{
+      if(user){
+        isAdmin=true;
+        const lnk=$('nav-admin-link'); if(lnk) lnk.style.display='none';
+        if(!orders.length) await loadAdminData();
+        if(window.location.hash==='#/admin'){ showPage('admin'); switchTab('products'); }
+        else showPage('store');
+      } else {
+        isAdmin=false;
+        const lnk=$('nav-admin-link'); if(lnk) lnk.style.display='';
+        if(window.location.hash==='#/admin') showPage('login');
+        else showPage('store');
+      }
+    }catch(e){
+      console.error('auth route error:',e);
+      loading(false);
+      showPage('store');
     }
   });
+
   window.addEventListener('hashchange',handleRoute);
 }
 init();
