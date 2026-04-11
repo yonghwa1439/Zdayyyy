@@ -45,6 +45,14 @@ body{font-family:'Apple SD Gothic Neo',-apple-system,BlinkMacSystemFont,'Segoe U
 .topnav-logo{font-size:15px;font-weight:700;letter-spacing:.04em;color:var(--ft-text);margin-right:auto}
 .topnav a{font-size:12px;color:var(--ft-sub);text-decoration:none;letter-spacing:.03em;transition:color .2s}
 .topnav a:hover{color:var(--ft-gold)}
+.topnav-action{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border:1px solid var(--ft-border);border-radius:999px;background:var(--ft-card);color:var(--ft-text)!important;font-size:12px;text-decoration:none}
+.topnav-action:hover{border-color:var(--ft-gold)}
+.topnav-count{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--ft-gold);color:#fff;font-size:11px;font-weight:700}
+.store-tools{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:1rem}
+.product-search{flex:1;min-width:220px;display:flex;gap:8px;align-items:center;background:var(--ft-card);border:1px solid var(--ft-border);border-radius:999px;padding:10px 14px;box-shadow:var(--ft-shadow)}
+.product-search input{border:none;outline:none;background:transparent;width:100%;font-size:13px;color:var(--ft-text)}
+.store-tools-link{font-size:12px;color:var(--ft-sub);text-decoration:none}
+.store-tools-link:hover{color:var(--ft-gold)}
 
 /* Pages */
 .page{display:none;padding:24px 20px;max-width:960px;margin:0 auto}
@@ -109,7 +117,7 @@ body{font-family:'Apple SD Gothic Neo',-apple-system,BlinkMacSystemFont,'Segoe U
 .p-img-dot{width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,.5)}
 .p-img-dot.active{background:#fff}
 /* Card body */
-.p-body{padding:12px 13px 14px}
+.p-body{padding:12px 13px 14px;display:flex;flex-direction:column;min-height:220px}
 .p-name{font-size:13px;font-weight:600;line-height:1.35;color:var(--ft-text);letter-spacing:.02em}
 .p-cat{font-size:10px;color:var(--ft-sub);margin-top:3px;letter-spacing:.04em;text-transform:uppercase}
 .p-orig-price{font-size:11px;color:var(--ft-sub);text-decoration:line-through;margin-top:4px}
@@ -117,7 +125,7 @@ body{font-family:'Apple SD Gothic Neo',-apple-system,BlinkMacSystemFont,'Segoe U
 .p-tag{display:inline-block;font-size:10px;padding:2px 8px;border-radius:10px;margin-top:4px;font-weight:500;letter-spacing:.03em}
 .tag-hot{background:#FDF0E6;color:#A8845A}
 .tag-new{background:#EAF3EE;color:#3D7A5A}
-.p-add-btn{margin-top:10px;width:100%;padding:9px;background:var(--ft-gold);color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:12px;font-weight:600;letter-spacing:.05em;transition:background .2s}
+.p-add-btn{margin-top:auto;width:100%;padding:9px;background:var(--ft-gold);color:#fff;border:none;border-radius:10px;cursor:pointer;font-size:12px;font-weight:600;letter-spacing:.05em;transition:background .2s}
 .p-add-btn:hover{background:#96733F}
 .p-add-btn.in-cart-btn{background:#3D7A5A}
 .cart-badge-card{position:absolute;top:8px;right:8px;background:var(--ft-gold);color:#fff;border-radius:50%;width:22px;height:22px;font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:700;z-index:2}
@@ -184,6 +192,8 @@ body{font-family:'Apple SD Gothic Neo',-apple-system,BlinkMacSystemFont,'Segoe U
 
 /* ── Lookup page ── */
 .lookup-box{background:var(--ft-card);border:1px solid var(--ft-border);border-radius:var(--ft-radius);padding:2rem;max-width:600px;margin:2rem auto;box-shadow:var(--ft-shadow)}
+.step-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.checkout-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:14px}
 .lookup-box h2{font-size:18px;font-weight:700;letter-spacing:.06em;color:var(--ft-text);margin-bottom:4px}
 .lookup-result{background:var(--ft-bg);border:1px solid var(--ft-border);border-radius:12px;padding:1.25rem;margin-top:12px}
 .lookup-result h4{font-size:13px;font-weight:700;margin-bottom:8px;color:var(--ft-text);letter-spacing:.04em}
@@ -273,7 +283,9 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:poin
   .p-slide-prev,.p-slide-next{display:flex}
   .order-panel{padding:1rem}
   .store-header{padding:1.5rem 1rem 1.25rem}
+  .product-search{min-width:100%}
 }
+
 </style>
 </head>
 <body style="background:var(--ft-bg)">
@@ -283,7 +295,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:poin
 
 <div class="topnav">
   <span class="topnav-logo" id="nav-logo">Zdayyyy 🌙</span>
-  <a href="#/lookup" id="nav-lookup-link" style="font-size:12px;color:var(--gray-text);text-decoration:none">查詢訂單</a>
+  <a href="javascript:void(0)" id="nav-cart-link" class="topnav-action" onclick="goCartStep()">🛒 購物車 <span class="topnav-count" id="nav-cart-count">0</span></a>
   <a href="#/admin" id="nav-admin-link">後台</a>
 </div>
 
@@ -297,6 +309,13 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:poin
   </div>
   <div class="closed-banner hidden" id="closed-banner"></div>
   <div id="store-open-section">
+    <div class="store-tools" id="store-tools">
+      <div class="product-search">
+        <span>🔍</span>
+        <input type="text" id="store-search-input" placeholder="搜尋商品名稱、分類、顏色、規格…" oninput="setStoreSearch(this.value)">
+      </div>
+      <a href="#/lookup" class="store-tools-link">查詢訂單</a>
+    </div>
     <div class="filter-bar" id="filter-bar"></div>
     <div class="product-grid" id="store-products"></div>
     <!-- Cart -->
@@ -310,11 +329,17 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:poin
         <div class="disc-hint hidden" id="disc-hint"></div>
         <div class="summary-row disc-row hidden" id="disc-row"><span id="disc-row-label">折扣</span><span id="disc-row-amt"></span></div>
         <div class="summary-row total-row"><span>總金額</span><span class="amt" id="cart-grand">NT$0</span></div>
+        <div class="step-actions">
+          <button class="btn-ft-primary" id="btn-go-checkout" onclick="goCheckoutStep()">下一步：填寫訂購資料</button>
+        </div>
       </div>
     </div>
     <!-- Form -->
-    <div class="order-panel" id="order-form-panel">
-      <h3>📋 填寫訂購資料</h3>
+    <div class="order-panel hidden" id="order-form-panel">
+      <div class="checkout-head">
+        <h3 style="margin-bottom:0">📋 填寫訂購資料</h3>
+        <button class="btn-ft-outline" type="button" onclick="goProductStep()">← 返回商品區</button>
+      </div>
       <div class="section-label">基本資料</div>
       <div class="field"><label>姓名 *</label><input type="text" id="c-name" placeholder="請輸入姓名"></div>
       <div class="field-row">
@@ -655,6 +680,8 @@ let settings   = {
   emailShow:'0', emailLabel:'Email（出貨通知用）'
 };
 let cart = {}, selectedCvs='', selectedPay='', isAdmin=false;
+let storeSearch = '';
+let storeStep = 'products';
 let selectedProductIds = new Set();
 let selectedOrderIds   = new Set();
 // pending images for product modal: [{url, storageRef or null, isNew}]
@@ -670,6 +697,32 @@ function genOrderNo(){
 }
 function closeModal(id){ $(id).classList.remove('open'); }
 function showToast(msg){ const t=$('cart-toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2200); }
+function setStoreSearch(v){ storeSearch=(v||'').trim().toLowerCase(); renderStore(); }
+function updateStoreStep(step){
+  storeStep=step;
+  const isCheckout=step==='checkout';
+  $('store-tools').style.display=isCheckout?'none':'';
+  $('filter-bar').style.display=isCheckout?'none':'';
+  $('store-products').style.display=isCheckout?'none':'';
+  $('cart-panel').style.display='';
+  $('order-form-panel').classList.toggle('hidden',!isCheckout);
+  if(isCheckout){ window.scrollTo({top:0,behavior:'smooth'}); }
+}
+function goCheckoutStep(){
+  if(!Object.keys(cart).length){ alert('請先加入商品'); return; }
+  updateStoreStep('checkout');
+}
+function goProductStep(){ updateStoreStep('products'); }
+function goCartStep(){
+  if(window.location.hash==='#/lookup') window.location.hash='';
+  updateStoreStep(Object.keys(cart).length&&storeStep==='checkout'?'checkout':'products');
+  const target=Object.keys(cart).length&&storeStep==='checkout' ? $('order-form-panel') : $('cart-panel');
+  if(target) target.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function updateCartCount(){
+  const count=Object.values(cart).reduce((s,i)=>s+(i.qty||0),0);
+  $('nav-cart-count').textContent=String(count);
+}
 
 // ── Firebase load ─────────────────────────────────
 async function loadPublicData(){
@@ -830,8 +883,11 @@ function renderStore(){
   buildFilterBar();
   let list=products.filter(p=>p.active);
   if(currentFilter!=='全部') list=list.filter(p=>p.cat===currentFilter);
+  if(storeSearch){
+    list=list.filter(p=>[p.name,p.cat,p.colors,p.descProd,p.gdia].filter(Boolean).join(' ').toLowerCase().includes(storeSearch));
+  }
   const el=$('store-products');
-  if(!list.length){ el.innerHTML='<p style="color:#aaa;font-size:13px;padding:1rem 0;grid-column:1/-1">目前沒有上架商品</p>'; return; }
+  if(!list.length){ el.innerHTML='<p style="color:#aaa;font-size:13px;padding:1rem 0;grid-column:1/-1">找不到符合的商品</p>'; return; }
   el.innerHTML=list.map(p=>{
     const inCart=!!cart[p._docId];
     const imgs=(p.images||[]).filter(Boolean);
@@ -985,9 +1041,10 @@ function removeFromCart(docId){ delete cart[docId]; renderStore(); renderCart();
 function calcShip(sub){ const t=Number(settings.freeShip)||0; return (t>0&&sub>=t)?0:(Number(settings.ship)||0); }
 
 function renderCart(){
+  updateCartCount();
   const items=Object.entries(cart);
   const el=$('cart-body'), sum=$('cart-summary');
-  if(!items.length){ el.innerHTML='<div class="cart-empty">尚未選購任何商品</div>'; sum.classList.add('hidden'); return; }
+  if(!items.length){ el.innerHTML='<div class="cart-empty">尚未選購任何商品</div>'; sum.classList.add('hidden'); $('btn-go-checkout')?.setAttribute('disabled','disabled'); return; }
   let sub=0;
   el.innerHTML=items.map(([id,i])=>{
     const s=i.price*i.qty; sub+=s;
@@ -1010,6 +1067,7 @@ function renderCart(){
   $('cart-subtotal').textContent='NT$'+sub.toLocaleString();
   $('cart-ship').textContent=ship===0?'免運':'NT$'+ship.toLocaleString();
   $('cart-grand').textContent='NT$'+Math.max(0,total).toLocaleString();
+  $('btn-go-checkout')?.removeAttribute('disabled');
 
   // free ship hint
   const hint=$('free-ship-hint'), thresh=Number(settings.freeShip)||0;
@@ -1114,6 +1172,7 @@ async function submitOrder(){
     $('success-order-no').textContent='訂單編號：'+orderNo;
     $('success-msg').textContent=settings.successMsg||'感謝您的訂購！';
     cart={};
+    updateCartCount();
   }catch(e){ alert('❌ 下單失敗：'+e.message); }
   loading(false);
 }
@@ -1670,7 +1729,7 @@ function handleRoute(){
     showPage('lookup');
     $('lookup-input').value=''; $('lookup-result').innerHTML='';
   } else {
-    if(!isAdmin) showPage('store');
+    if(!isAdmin){ showPage('store'); updateStoreStep('products'); }
   }
 }
 
@@ -1679,6 +1738,7 @@ document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{
 // ── Expose globals ────────────────────────────────
 Object.assign(window,{
   filterType,slideImg,openCartModal,selectCartColor,modalSwitchImg,confirmAddToCart,removeFromCart,
+  setStoreSearch,goCheckoutStep,goProductStep,goCartStep,
   selectCvs,selectPay,submitOrder,doLookup,
   doLogin,logout,switchTab,
   openProductModal,editProduct,saveProduct,toggleActive,deleteProduct,
@@ -1695,7 +1755,7 @@ Object.assign(window,{
 // ── Init ──────────────────────────────────────────
 async function init(){
   await loadPublicData();
-  applySettings(); renderStore(); renderPayList();
+  applySettings(); renderStore(); renderPayList(); renderCart(); updateStoreStep('products');
   onAuthStateChanged(auth, async(user)=>{
     loading(false);
     if(user){
