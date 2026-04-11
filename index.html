@@ -594,7 +594,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:poin
           ondragover="event.preventDefault();this.style.borderColor='var(--teal)'"
           ondragleave="this.style.borderColor='var(--gray-border)'"
           ondrop="event.preventDefault();this.style.borderColor='var(--gray-border)';handleImgFiles(event.dataTransfer.files)">
-          <input type="file" id="f-img-file" accept="image/*" multiple capture="environment"
+          <input type="file" id="f-img-file" accept="image/*" multiple
             style="display:none" onchange="handleImgFiles(this.files)">
           <div style="font-size:26px;margin-bottom:6px">📷</div>
           <div style="font-size:13px;color:var(--text-sub)">點此從手機相簿或電腦選取圖片</div>
