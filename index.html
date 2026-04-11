@@ -790,7 +790,9 @@ function goCartStep(){
   },50);
 }
 function backToStore(){
-  window.location.hash='';
+  isAdmin=false;
+  const lnk=$('nav-admin-link'); if(lnk) lnk.style.display='';
+  history.pushState(null,'',location.pathname); // 清除 hash 不觸發 hashchange
   showPage('store');
   updateStoreStep('products');
 }
