@@ -321,7 +321,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:poin
 <div class="cart-toast" id="cart-toast"></div>
 
 <div class="topnav">
-  <span class="topnav-logo" id="nav-logo">Zdayyyy 🌙</span>
+  <span class="topnav-logo" id="nav-logo" onclick="backToStore()" style="cursor:pointer">Zdayyyy 🌙</span>
   <a href="javascript:void(0)" id="nav-cart-link" class="topnav-action" onclick="goCartStep()">🛒 購物車 <span class="topnav-count" id="nav-cart-count">0</span></a>
   <a href="#/admin" id="nav-admin-link">後台</a>
 </div>
@@ -2197,16 +2197,22 @@ function openPayModal(docId=null){
   $('modal-pay-title').textContent=docId?'編輯付款方式':'新增付款方式';
   if(docId){
     const m=payMethods.find(x=>x._docId===docId);
-    $('pay-f-name').value=m.name; $('pay-f-icon').value=m.icon||'';
-    $('pay-f-type').value=m.type||'bank'; $('pay-f-bank').value=m.bank||'';
-    $('pay-f-acct').value=m.acct||''; $('pay-f-hname').value=m.hname||'';
-    $('pay-f-qr').value=m.qr||''; $('pay-f-note').value=m.note||'';
+    if(!m){ alert('找不到付款方式資料'); return; }
+    $('pay-f-name').value=m.name||'';
+    $('pay-f-icon').value=m.icon||'';
+    $('pay-f-type').value=m.type||'bank';
+    $('pay-f-bank').value=m.bank||'';
+    $('pay-f-acct').value=m.acct||'';
+    $('pay-f-qr').value=m.qr||'';
+    $('pay-f-note').value=m.note||'';
     $('pay-f-active').value=m.active?'1':'0';
   } else {
-    ['pay-f-name','pay-f-icon','pay-f-bank','pay-f-acct','pay-f-hname','pay-f-qr','pay-f-note'].forEach(f=>$(f).value='');
-    $('pay-f-type').value='bank'; $('pay-f-active').value='1';
+    ['pay-f-name','pay-f-icon','pay-f-bank','pay-f-acct','pay-f-qr','pay-f-note'].forEach(f=>{ const el=$(f); if(el) el.value=''; });
+    $('pay-f-type').value='bank';
+    $('pay-f-active').value='1';
   }
-  togglePayFields(); $('modal-pay').classList.add('open');
+  togglePayFields();
+  $('modal-pay').classList.add('open');
 }
 function editPayMethod(id){ openPayModal(id); }
 function togglePayFields(){ const t=$('pay-f-type').value; $('pay-bank-fields').classList.toggle('hidden',t!=='bank'); $('pay-qr-fields').classList.toggle('hidden',t!=='jkos'); }
