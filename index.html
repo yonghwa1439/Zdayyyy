@@ -596,6 +596,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:poin
         <div id="img-url-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px"></div>
         <button type="button" class="btn btn-sm" onclick="addImgUrlField()">＋ 新增圖片網址</button>
         <div class="img-thumbs" id="img-thumbs" style="margin-top:10px"></div>
+        <div id="img-upload-progress" style="font-size:12px;margin-top:4px"></div>
       </div>
     </div>
     <div class="modal-actions">
@@ -1374,19 +1375,38 @@ function openProductModal(docId=null){
   pendingImgs=[];
   if(docId){
     const p=products.find(x=>x._docId===docId);
-    $('f-name').value=p.name; $('f-brand').value=p.brand||''; $('f-cat').value=p.cat||''; $('f-price').value=p.price;
-    $('f-orig-price').value=p.origPrice||''; $('f-colors').value=p.colors||'';
+    if(!p){ alert('找不到商品資料'); return; }
+    $('f-name').value=p.name||'';
+    $('f-brand').value=p.brand||'';
+    $('f-cat').value=p.cat||'';
+    $('f-price').value=p.price||'';
+    $('f-orig-price').value=p.origPrice||'';
+    $('f-colors').value=p.colors||'';
     $('f-gdia').value=p.gdia||'';
     $('f-desc-prod').value=p.descProd||'';
-    $('f-tag').value=p.tag||''; $('f-active').value=p.active?'1':'0';
-    $('f-deg-mode').value=p.degMode||'single'; $('f-powers').value=p.powers||'';
+    $('f-tag').value=p.tag||'';
+    $('f-active').value=p.active?'1':'0';
+    $('f-deg-mode').value=p.degMode||'single';
+    $('f-powers').value=p.powers||'';
     pendingImgs=(p.images||[]).map(u=>({url:u,isNew:false}));
   } else {
-    ['f-name','f-brand','f-cat','f-price','f-orig-price','f-colors','f-gdia','f-desc-prod','f-powers'].forEach(f=>$(f).value='');
-    $('f-tag').value=''; $('f-active').value='1'; $('f-deg-mode').value='single';
+    ['f-name','f-brand','f-cat','f-price','f-orig-price','f-colors','f-gdia','f-desc-prod','f-powers']
+      .forEach(f=>{ const el=$(f); if(el) el.value=''; });
+    $('f-tag').value='';
+    $('f-active').value='1';
+    $('f-deg-mode').value='single';
+  }
+  // 重建 img-url-list 欄位
+  const list=$('img-url-list');
+  if(list){
+    list.innerHTML='';
+    if(pendingImgs.length){
+      pendingImgs.forEach(img=>_appendImgUrlRow(img.url));
+    }
   }
   renderImgThumbs();
-  $('img-upload-progress').textContent='';
+  const prog=$('img-upload-progress');
+  if(prog) prog.textContent='';
   $('modal-product').classList.add('open');
 }
 
@@ -1400,60 +1420,37 @@ function renderImgThumbs(){
 
 function removeImg(i){ pendingImgs.splice(i,1); renderImgThumbs(); }
 
-async function handleImgSelect(e){
-  const files=Array.from(e.target.files); if(!files.length) return;
-  const prog=$('img-upload-progress');
-  prog.style.color='var(--teal)';
-  prog.textContent=`準備上傳 ${files.length} 張…`;
-  let done=0, failed=0;
-  for(const file of files){
-    // 壓縮：若超過 1MB 先縮小
-    const blob = file.size > 1024*1024 ? await compressImg(file, 1200) : file;
-    prog.textContent=`上傳中 ${done+1}/${files.length}：${file.name}`;
-    try{
-      const path=`products/${Date.now()}_${Math.random().toString(36).slice(2)}_${file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
-      const storageRef=sRef(storage,path);
-      await uploadBytes(storageRef, blob);
-      const url=await getDownloadURL(storageRef);
-      pendingImgs.push({url,isNew:true,path});
-      done++;
-      renderImgThumbs();
-    }catch(err){
-      failed++;
-      console.error('上傳失敗',file.name, err);
-      // 常見錯誤友善提示
-      let msg=err.message;
-      if(err.code==='storage/unauthorized') msg='Firebase Storage 權限不足。\n\n請至 Firebase Console → Storage → 規則，確認已允許登入者寫入。';
-      else if(err.code==='storage/object-not-found') msg='找不到儲存位置，請確認 Storage 已啟用。';
-      prog.style.color='var(--red)';
-      prog.textContent=`❌ 上傳失敗：${file.name}`;
-      alert('圖片上傳失敗：'+msg);
-    }
-  }
-  if(done>0){
-    prog.style.color='var(--teal)';
-    prog.textContent=`✅ 已上傳 ${done} 張${failed>0?`，${failed} 張失敗`:''}`;
-  }
-  e.target.value='';
+// ── Image URL management (圖片網址模式，不需要 Storage) ──
+function _appendImgUrlRow(url=''){
+  const list=$('img-url-list'); if(!list) return;
+  const row=document.createElement('div');
+  row.style.cssText='display:flex;gap:6px;align-items:center';
+  row.innerHTML=`
+    <input type="text" value="${url.replace(/"/g,'&quot;')}" placeholder="https://i.imgur.com/xxxxxx.jpg"
+      style="flex:1;padding:8px 10px;border:1px solid var(--gray-border);border-radius:8px;font-size:13px;outline:none"
+      oninput="syncImgUrls()"
+      onfocus="this.style.borderColor='var(--teal)'"
+      onblur="this.style.borderColor='var(--gray-border)'">
+    <button type="button"
+      style="background:none;border:none;cursor:pointer;color:var(--gray-text);font-size:18px;padding:0 4px;line-height:1"
+      onclick="this.parentElement.remove();syncImgUrls()">✕</button>`;
+  list.appendChild(row);
 }
-
-// 壓縮圖片到指定最大邊長
-function compressImg(file, maxPx){
-  return new Promise(resolve=>{
-    const img=new Image();
-    const url=URL.createObjectURL(file);
-    img.onload=()=>{
-      const scale=Math.min(1, maxPx/Math.max(img.width,img.height));
-      const w=Math.round(img.width*scale), h=Math.round(img.height*scale);
-      const canvas=document.createElement('canvas');
-      canvas.width=w; canvas.height=h;
-      canvas.getContext('2d').drawImage(img,0,0,w,h);
-      URL.revokeObjectURL(url);
-      canvas.toBlob(b=>resolve(b||file),'image/jpeg',0.85);
-    };
-    img.onerror=()=>{ URL.revokeObjectURL(url); resolve(file); };
-    img.src=url;
-  });
+function addImgUrlField(){
+  _appendImgUrlRow('');
+  syncImgUrls();
+}
+function syncImgUrls(){
+  const list=$('img-url-list'); if(!list) return;
+  const urls=Array.from(list.querySelectorAll('input'))
+    .map(i=>i.value.trim()).filter(Boolean);
+  pendingImgs=urls.map(u=>({url:u,isNew:false}));
+  // 預覽縮圖
+  const thumbs=$('img-thumbs'); if(!thumbs) return;
+  thumbs.innerHTML=urls.map((u,i)=>`
+    <div class="img-thumb">
+      <img src="${u}" alt="" onerror="this.src='';this.parentElement.style.background='var(--gray-bg)'">
+    </div>`).join('');
 }
 
 function editProduct(id){ openProductModal(id); }
@@ -1936,7 +1933,7 @@ Object.assign(window,{
   selectCvs,selectPay,submitOrder,doLookup,
   doLogin,logout,switchTab,
   openProductModal,editProduct,saveProduct,toggleActive,deleteProduct,
-  handleImgSelect,removeImg,
+  addImgUrlField,syncImgUrls,removeImg,
   toggleProductSel,toggleProductSelAll,clearProductSel,batchProductActive,
   renderOrderTable,exportExcel,clearDateFilter,
   toggleOrderSel,toggleOrderSelAll,clearOrderSel,batchOrderStatus,batchDeleteOrders,
