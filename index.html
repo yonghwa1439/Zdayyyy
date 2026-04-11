@@ -794,15 +794,17 @@ async function loadPublicData(){
       // 遷移舊格式：若有 emailShow 但沒有 fields，自動遷移
       if(!settings.fields||!settings.fields.length){
         const fc=settings.fieldConfig||{};
-        const emailShow=settings.emailShow||'0';
+        const es=settings.emailShow||'0';
+        const _v=(key,def=true)=>fc[key]?.show!==undefined?!!fc[key].show:def;
+        const _r=(key,def=false)=>fc[key]?.required!==undefined?!!fc[key].required:def;
         settings.fields=[
-          {key:'name',      label:'姓名',            type:'text',     visible:true,               required:true},
-          {key:'phone',     label:'聯絡電話',         type:'tel',      visible:true,               required:true},
-          {key:'ig',        label:'Instagram 帳號',  type:'text',     visible:fc.ig?.show!==false, required:fc.ig?.required||false},
-          {key:'email',     label:'Email',           type:'email',    visible:emailShow!=='0',     required:emailShow==='2'},
-          {key:'storeName', label:'門市名稱',         type:'text',     visible:true,               required:true},
-          {key:'storeNo',   label:'店號／地址',       type:'text',     visible:fc.storeNo?.show!==false, required:fc.storeNo?.required||false},
-          {key:'note',      label:'備註',            type:'textarea', visible:fc.note?.show!==false,    required:fc.note?.required||false},
+          {key:'name',      label:'姓名',            type:'text',     visible:true,     required:true},
+          {key:'phone',     label:'聯絡電話',         type:'tel',      visible:true,     required:true},
+          {key:'ig',        label:'Instagram 帳號',  type:'text',     visible:_v('ig'), required:_r('ig')},
+          {key:'email',     label:'Email',           type:'email',    visible:es!=='0', required:es==='2'},
+          {key:'storeName', label:'門市名稱',         type:'text',     visible:true,     required:true},
+          {key:'storeNo',   label:'店號／地址',       type:'text',     visible:_v('storeNo'), required:_r('storeNo')},
+          {key:'note',      label:'備註',            type:'textarea', visible:_v('note'),    required:_r('note')},
         ];
       }
     }
@@ -949,70 +951,72 @@ function fieldDragEnd(){ _dragSrcIdx=null; }
 // ── 前台：動態產生訂單表單 ────────────────────────
 function renderOrderForm(){
   const fields=getFields();
-  const containers={1:$('dynamic-form-fields'),2:$('dynamic-form-fields-2'),3:$('dynamic-form-fields-3')};
-  Object.values(containers).forEach(c=>{ if(c) c.innerHTML=''; });
+  const c1=$('dynamic-form-fields');
+  const c2=$('dynamic-form-fields-2');
+  const c3=$('dynamic-form-fields-3');
+  if(c1) c1.innerHTML='';
+  if(c2) c2.innerHTML='';
+  if(c3) c3.innerHTML='';
+  // 移除上次插入的「其他」section-label（避免重複）
+  document.querySelectorAll('.dff-other-label').forEach(el=>el.remove());
 
-  // storeName+storeNo 一起放同一 field-row
   const storeNameF=fields.find(f=>f.key==='storeName');
-  const storeNoF=fields.find(f=>f.key==='storeNo');
+  const storeNoF  =fields.find(f=>f.key==='storeNo');
 
   fields.forEach(f=>{
     if(!f.visible) return;
     const group=_fieldGroup[f.key]??1;
-    const container=containers[group]; if(!container) return;
-    // storeName+storeNo 合併一行
+    const container=group===1?c1:group===2?c2:c3;
+    if(!container) return;
+
     if(f.key==='storeName'){
       const noVisible=storeNoF?.visible;
       const storeNoHtml=noVisible
-        ?`<div class="field" id="dff-storeNo">
-            <label>${storeNoF.label}${storeNoF.required?' *':'（選填）'}</label>
-            <input type="${storeNoF.type||'text'}" id="c-storeNo" placeholder="例：168899">
-          </div>`:'';
-      container.insertAdjacentHTML('beforeend',`
-        <div class="field-row">
-          <div class="field" id="dff-storeName">
-            <label>${f.label}${f.required?' *':'（選填）'}</label>
-            <input type="${f.type||'text'}" id="c-storeName" placeholder="例：信義門市">
-          </div>
-          ${storeNoHtml}
-        </div>`);
+        ?`<div class="field"><label>${storeNoF.label}${storeNoF.required?' *':'（選填）'}</label>
+           <input type="${storeNoF.type||'text'}" id="c-storeNo" placeholder="例：168899"></div>`:'';
+      container.insertAdjacentHTML('beforeend',
+        `<div class="field-row">
+           <div class="field"><label>${f.label}${f.required?' *':'（選填）'}</label>
+             <input type="${f.type||'text'}" id="c-storeName" placeholder="例：信義門市"></div>
+           ${storeNoHtml}
+         </div>`);
       return;
     }
-    if(f.key==='storeNo') return; // 已在 storeName 裡處理
+    if(f.key==='storeNo') return;
+
     const reqMark=f.required?' *':'（選填）';
+    const ph=f.type==='tel'?'09xx-xxxxxx':f.type==='email'?'your@email.com':f.label+'…';
     const inputHtml=f.type==='textarea'
-      ?`<textarea id="c-${f.key}" rows="2" style="resize:vertical" placeholder="${f.label}…"></textarea>`
-      :`<input type="${f.type||'text'}" id="c-${f.key}" placeholder="${f.type==='tel'?'09xx-xxxxxx':f.type==='email'?'your@email.com':f.label+'…'}">`;
-    container.insertAdjacentHTML('beforeend',`
-      <div class="field" id="dff-${f.key}">
-        <label>${f.label}${reqMark}</label>
-        ${inputHtml}
-      </div>`);
+      ?`<textarea id="c-${f.key}" rows="2" style="resize:vertical" placeholder="${ph}"></textarea>`
+      :`<input type="${f.type||'text'}" id="c-${f.key}" placeholder="${ph}">`;
+    container.insertAdjacentHTML('beforeend',
+      `<div class="field"><label>${f.label}${reqMark}</label>${inputHtml}</div>`);
   });
 
-  // 其他區加付款提醒佔位（若 fields-3 有內容才加 section-label）
-  const f3=$('dynamic-form-fields-3');
-  if(f3&&f3.children.length){
-    f3.insertAdjacentHTML('beforebegin','<div class="section-label">其他</div>');
+  // 若「其他」區有內容才加 section-label（用唯一 class 方便清除）
+  if(c3&&c3.children.length){
+    const lbl=document.createElement('div');
+    lbl.className='section-label dff-other-label';
+    c3.parentElement.insertBefore(lbl,c3);
+    lbl.textContent='其他';
   }
 }
 
-// ── applySettings 精簡版 ─────────────────────────
+// ── applySettings ────────────────────────────────
 function applySettings(){
-  document.title=$('nav-logo').textContent=$('s-title').textContent=settings.title;
-  $('s-desc').textContent=settings.desc;
+  document.title=$('nav-logo').textContent=$('s-title').textContent=settings.title||'';
+  if($('s-desc')) $('s-desc').textContent=settings.desc||'';
   const dl=$('s-deadline');
-  if(settings.deadline){ dl.textContent='📅 截單日期：'+settings.deadline; dl.style.display=''; }
-  else dl.style.display='none';
+  if(dl){ if(settings.deadline){ dl.textContent='📅 截單日期：'+settings.deadline; dl.style.display=''; } else dl.style.display='none'; }
   const an=$('s-announce');
-  settings.announce?(an.textContent=settings.announce,an.classList.remove('hidden')):an.classList.add('hidden');
+  if(an){ settings.announce?(an.textContent=settings.announce,an.classList.remove('hidden')):an.classList.add('hidden'); }
   const isOpen=settings.open==='1';
-  $('store-open-section').style.display=isOpen?'':'none';
+  const sos=$('store-open-section'); if(sos) sos.style.display=isOpen?'':'none';
   const cb=$('closed-banner');
-  isOpen?cb.classList.add('hidden'):(cb.textContent=settings.closedText||'本次開團已結束',cb.classList.remove('hidden'));
-  $('ship-label').textContent=settings.shipLabel||'超商運費';
+  if(cb){ isOpen?cb.classList.add('hidden'):(cb.textContent=settings.closedText||'本次開團已結束',cb.classList.remove('hidden')); }
+  const sl=$('ship-label'); if(sl) sl.textContent=settings.shipLabel||'超商運費';
   const rb=$('pay-reminder-box');
-  settings.payReminder?(rb.textContent=settings.payReminder,rb.classList.remove('hidden')):rb.classList.add('hidden');
+  if(rb){ settings.payReminder?(rb.textContent=settings.payReminder,rb.classList.remove('hidden')):rb.classList.add('hidden'); }
   renderOrderForm();
 }
 
@@ -2148,7 +2152,7 @@ Object.assign(window,{
 // ── Init ──────────────────────────────────────────
 async function init(){
   await loadPublicData();
-  applySettings(); renderStore(); renderPayList(); renderCart(); renderOrderForm(); updateStoreStep('products');
+  applySettings(); renderStore(); renderPayList(); renderCart(); updateStoreStep('products');
   onAuthStateChanged(auth, async(user)=>{
     loading(false);
     if(user){
