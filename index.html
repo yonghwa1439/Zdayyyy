@@ -588,23 +588,20 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:poin
       </div>
       <div class="field span2">
         <label>商品圖片</label>
-        <!-- 上傳區：手機/電腦皆可直接選相片，不限張數 -->
-        <div id="img-upload-area" style="border:2px dashed var(--gray-border);border-radius:10px;padding:16px;text-align:center;cursor:pointer;position:relative;transition:border-color .2s;margin-bottom:10px"
-          onclick="$('f-img-file').click()"
+        <label for="f-img-file" id="img-upload-area"
+          style="display:block;border:2px dashed var(--gray-border);border-radius:10px;padding:20px;text-align:center;cursor:pointer;transition:border-color .2s;margin-bottom:10px"
           ondragover="event.preventDefault();this.style.borderColor='var(--teal)'"
           ondragleave="this.style.borderColor='var(--gray-border)'"
           ondrop="event.preventDefault();this.style.borderColor='var(--gray-border)';handleImgFiles(event.dataTransfer.files)">
           <input type="file" id="f-img-file" accept="image/*" multiple
             style="display:none" onchange="handleImgFiles(this.files)">
           <div style="font-size:26px;margin-bottom:6px">📷</div>
-          <div style="font-size:13px;color:var(--text-sub)">點此從手機相簿或電腦選取圖片</div>
+          <div style="font-size:13px;color:var(--text-sub)">點此選取圖片（手機／電腦皆可）</div>
           <div style="font-size:11px;color:var(--gray-text);margin-top:4px">支援多選・JPG / PNG・自動壓縮上傳</div>
-        </div>
-        <!-- 或貼網址 -->
+        </label>
         <div style="font-size:11px;color:var(--gray-text);margin-bottom:6px;text-align:center">— 或直接貼上圖片網址 —</div>
         <div id="img-url-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px"></div>
         <button type="button" class="btn btn-sm" onclick="addImgUrlField()">＋ 新增圖片網址</button>
-        <!-- 預覽區 -->
         <div id="img-upload-progress" style="font-size:12px;color:var(--teal);margin-top:8px;min-height:16px"></div>
         <div class="img-thumbs" id="img-thumbs" style="margin-top:10px"></div>
       </div>
@@ -2122,7 +2119,9 @@ function handleRoute(){
   }
 }
 
-document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('open'); }));
+document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{
+  if(e.target===o && o.id!=='modal-product') o.classList.remove('open');
+}));
 
 // ── Expose globals ────────────────────────────────
 Object.assign(window,{
