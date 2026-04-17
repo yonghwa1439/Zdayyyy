@@ -33,6 +33,8 @@
 
 body{font-family:'Apple SD Gothic Neo',-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans TC',sans-serif;font-size:14px;color:var(--text);background:var(--gray-bg)}
 .hidden{display:none!important}
+/* 後台入口對一般用戶永遠不可見 */
+#nav-admin-link{display:none!important;}
 
 /* Loading */
 #loading-overlay{position:fixed;inset:0;background:rgba(250,248,245,.92);z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px}
@@ -323,7 +325,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:poin
 <div class="topnav">
   <span class="topnav-logo" id="nav-logo" onclick="backToStore()" style="cursor:pointer">Zdayyyy 🌙</span>
   <a href="javascript:void(0)" id="nav-cart-link" class="topnav-action" onclick="goCartStep()">🛒 購物車 <span class="topnav-count" id="nav-cart-count">0</span></a>
-  <a href="#/admin" id="nav-admin-link">後台</a>
+  <a href="#/admin" id="nav-admin-link" style="display:none!important;visibility:hidden;pointer-events:none;opacity:0;position:absolute;width:0;height:0;overflow:hidden">後台</a>
 </div>
 
 <!-- ══════════════ STORE ══════════════ -->
@@ -554,7 +556,32 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:poin
         <div class="field"><label>下單成功頁說明（支援換行）</label><textarea id="cfg-success-msg" rows="3" style="resize:vertical"></textarea></div>
       </div>
       <div class="settings-section">
-        <h3>📝 前台訂單欄位管理</h3>
+        <h3>🏷 商品選項管理</h3>
+        <p style="font-size:12px;color:var(--gray-text);margin-bottom:12px">管理新增／編輯商品時的分類、品牌、度數選項。</p>
+        <div class="field-row">
+          <div>
+            <div style="font-size:13px;font-weight:600;margin-bottom:6px;color:var(--text-sub)">分類</div>
+            <div id="opt-cats-list" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
+            <div style="display:flex;gap:6px">
+              <input type="text" id="opt-cat-input" placeholder="新分類名稱" style="flex:1;padding:6px 9px;border:1px solid var(--gray-border);border-radius:7px;font-size:13px;outline:none">
+              <button class="btn btn-sm btn-primary" onclick="addProductOpt('cats')">＋</button>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:13px;font-weight:600;margin-bottom:6px;color:var(--text-sub)">品牌</div>
+            <div id="opt-brands-list" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
+            <div style="display:flex;gap:6px">
+              <input type="text" id="opt-brand-input" placeholder="新品牌名稱" style="flex:1;padding:6px 9px;border:1px solid var(--gray-border);border-radius:7px;font-size:13px;outline:none">
+              <button class="btn btn-sm btn-primary" onclick="addProductOpt('brands')">＋</button>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:14px">
+          <div style="font-size:13px;font-weight:600;margin-bottom:6px;color:var(--text-sub)">度數預設組合</div>
+          <div id="opt-powers-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px"></div>
+          <button class="btn btn-sm btn-primary" onclick="addPowerSet()">＋ 新增度數組合</button>
+        </div>
+      </div>
         <p style="font-size:12px;color:var(--gray-text);margin-bottom:12px">統一管理前台訂單表單的欄位。可調整顯示/必填，拖曳列可排序。</p>
         <table style="width:100%;font-size:13px;border-collapse:collapse;table-layout:fixed" id="fields-table">
           <thead><tr style="background:var(--gray-bg)">
@@ -589,8 +616,14 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:poin
     <input type="hidden" id="edit-id">
     <div class="form-grid">
       <div class="field span2"><label>商品名稱 *</label><input type="text" id="f-name" placeholder="例：1-DAY ACUVUE MOIST"></div>
-      <div class="field"><label>品牌</label><input type="text" id="f-brand" placeholder="例：Johnson & Johnson"></div>
-      <div class="field"><label>分類</label><input type="text" id="f-cat" placeholder="日拋、月拋、彩片…"></div>
+      <div class="field">
+        <label>品牌</label>
+        <select id="f-brand"><option value="">（選擇品牌）</option></select>
+      </div>
+      <div class="field">
+        <label>分類</label>
+        <select id="f-cat"><option value="">（選擇分類）</option></select>
+      </div>
       <div class="field"><label>售價（NT$）*</label><input type="number" id="f-price" placeholder="490"></div>
       <div class="field"><label>原價（NT$，選填）</label><input type="number" id="f-orig-price" placeholder="590"></div>
       <div class="field"><label>顏色（選填，逗號分隔）</label><input type="text" id="f-colors" placeholder="透明、棕色、灰色…"></div>
@@ -608,8 +641,13 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:poin
           <option value="lr">左右眼分開選</option>
         </select>
       </div>
-      <div class="field"><label>可選度數（逗號分隔）</label>
-        <input type="text" id="f-powers" placeholder="無度數,-1.00,-1.50,-2.00,-3.00">
+      <div class="field">
+        <label>可選度數</label>
+        <select id="f-powers-preset" onchange="applyPowersPreset(this.value)">
+          <option value="">（選擇預設組合）</option>
+        </select>
+        <input type="text" id="f-powers" placeholder="無度數,-1.00,-1.50,-2.00,-3.00" style="margin-top:6px">
+        <div style="font-size:11px;color:var(--gray-text);margin-top:3px">可選預設後再手動修改</div>
       </div>
       <div class="field span2">
         <label>商品圖片</label>
@@ -634,6 +672,24 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:poin
     <div class="modal-actions">
       <button class="btn" onclick="closeModal('modal-product')">取消</button>
       <button class="btn btn-primary" onclick="saveProduct()">儲存商品</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: 商品詳情（前台） ═══ -->
+<div class="overlay" id="modal-product-detail">
+  <div class="modal" style="max-width:500px">
+    <div id="pd-img" style="margin-bottom:10px"></div>
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:4px">
+      <h3 id="pd-name" style="margin:0;font-size:17px;flex:1"></h3>
+      <button onclick="closeModal('modal-product-detail')" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--ft-sub);padding:0;line-height:1;flex-shrink:0">✕</button>
+    </div>
+    <div id="pd-meta" style="font-size:12px;color:var(--ft-sub);margin-bottom:8px;display:flex;flex-wrap:wrap;gap:8px"></div>
+    <div id="pd-price" style="font-size:18px;font-weight:700;color:var(--ft-gold);margin-bottom:8px"></div>
+    <div id="pd-desc" style="font-size:13px;color:var(--ft-sub);line-height:1.7;white-space:pre-line;margin-bottom:14px"></div>
+    <div class="modal-actions" style="border-top:1px solid var(--ft-border);padding-top:14px;margin-top:0">
+      <button class="btn" onclick="closeModal('modal-product-detail')">關閉</button>
+      <button class="btn-ft-primary" style="flex:1;padding:10px" id="pd-add-btn" onclick="">加入購物車 🛒</button>
     </div>
   </div>
 </div>
@@ -743,7 +799,17 @@ let settings   = {
     {key:'storeName', label:'門市名稱',          type:'text',     visible:true,  required:true },
     {key:'storeNo',   label:'店號／地址',        type:'text',     visible:true,  required:false},
     {key:'note',      label:'備註',             type:'textarea', visible:true,  required:false},
-  ]
+  ],
+  // 商品選項管理
+  productOptions:{
+    cats:['日拋','月拋','彩片','週拋'],
+    brands:['Johnson & Johnson','Alcon','Bausch & Lomb','CooperVision','其他'],
+    powerSets:[
+      {name:'標準度數',powers:'無度數,-1.00,-1.50,-2.00,-2.50,-3.00,-3.50,-4.00,-4.50,-5.00,-5.50,-6.00'},
+      {name:'低度數',  powers:'無度數,-0.50,-1.00,-1.50,-2.00,-2.50,-3.00'},
+      {name:'高度數',  powers:'-4.00,-4.50,-5.00,-5.50,-6.00,-6.50,-7.00,-8.00,-10.00'},
+    ]
+  }
 };
 let cart = {}, selectedCvs='', selectedPay='', isAdmin=false;
 
@@ -787,7 +853,13 @@ function updateStoreStep(step){
   $('store-products').style.display=isCheckout?'none':'';
   $('cart-panel').style.display='';
   $('order-form-panel').classList.toggle('hidden',!isCheckout);
-  if(isCheckout){ window.scrollTo({top:0,behavior:'smooth'}); }
+  if(isCheckout){
+    // 先等 DOM 顯示後再滾動，手機也正常
+    setTimeout(()=>{
+      const target=$('order-form-panel');
+      if(target) target.scrollIntoView({behavior:'smooth',block:'start'});
+    },50);
+  }
 }
 function goCheckoutStep(){
   if(!Object.keys(cart).length){ alert('請先加入商品'); return; }
@@ -1161,6 +1233,103 @@ function applySettings(){
   renderOrderForm();
 }
 
+// ── 商品選項管理（分類/品牌/度數）────────────────
+function getProductOptions(){
+  return settings.productOptions || {cats:[],brands:[],powerSets:[]};
+}
+function renderProductOptions(){
+  const opts=getProductOptions();
+  // 分類 tags
+  const catsList=$('opt-cats-list');
+  if(catsList) catsList.innerHTML=(opts.cats||[]).map((c,i)=>
+    `<span style="display:inline-flex;align-items:center;gap:4px;background:var(--teal-light);color:var(--teal-dark);border-radius:20px;padding:3px 10px;font-size:12px">
+      ${c}<button type="button" onclick="removeProductOpt('cats',${i})" style="background:none;border:none;cursor:pointer;color:var(--teal-dark);font-size:14px;padding:0;line-height:1">×</button>
+    </span>`).join('');
+  // 品牌 tags
+  const brandsList=$('opt-brands-list');
+  if(brandsList) brandsList.innerHTML=(opts.brands||[]).map((b,i)=>
+    `<span style="display:inline-flex;align-items:center;gap:4px;background:var(--amber-light);color:var(--amber);border-radius:20px;padding:3px 10px;font-size:12px">
+      ${b}<button type="button" onclick="removeProductOpt('brands',${i})" style="background:none;border:none;cursor:pointer;color:var(--amber);font-size:14px;padding:0;line-height:1">×</button>
+    </span>`).join('');
+  // 度數組合
+  const pwList=$('opt-powers-list');
+  if(pwList) pwList.innerHTML=(opts.powerSets||[]).map((ps,i)=>
+    `<div style="display:flex;gap:6px;align-items:center;background:var(--gray-bg);border-radius:8px;padding:8px 10px">
+      <div style="flex:1">
+        <input type="text" value="${ps.name}" placeholder="組合名稱"
+          style="width:100%;padding:4px 8px;border:1px solid var(--gray-border);border-radius:6px;font-size:12px;outline:none;margin-bottom:4px"
+          oninput="updatePowerSet(${i},'name',this.value)">
+        <input type="text" value="${ps.powers}" placeholder="無度數,-1.00,-1.50…"
+          style="width:100%;padding:4px 8px;border:1px solid var(--gray-border);border-radius:6px;font-size:12px;outline:none"
+          oninput="updatePowerSet(${i},'powers',this.value)">
+      </div>
+      <button type="button" onclick="removePowerSet(${i})" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:18px;padding:0 4px">✕</button>
+    </div>`).join('');
+}
+function addProductOpt(type){
+  const inputId=type==='cats'?'opt-cat-input':'opt-brand-input';
+  const inp=$(inputId); if(!inp) return;
+  const val=inp.value.trim(); if(!val) return;
+  const opts=getProductOptions();
+  if(!(opts[type]||[]).includes(val)){
+    opts[type]=[...(opts[type]||[]),val];
+    settings.productOptions=opts;
+  }
+  inp.value='';
+  renderProductOptions();
+}
+function removeProductOpt(type,i){
+  const opts=getProductOptions();
+  opts[type]=(opts[type]||[]).filter((_,idx)=>idx!==i);
+  settings.productOptions=opts;
+  renderProductOptions();
+}
+function addPowerSet(){
+  const opts=getProductOptions();
+  opts.powerSets=[...(opts.powerSets||[]),{name:'新組合',powers:'無度數,-1.00,-2.00,-3.00,-4.00,-5.00,-6.00'}];
+  settings.productOptions=opts;
+  renderProductOptions();
+}
+function removePowerSet(i){
+  if(!confirm('確定刪除此度數組合？')) return;
+  const opts=getProductOptions();
+  opts.powerSets=(opts.powerSets||[]).filter((_,idx)=>idx!==i);
+  settings.productOptions=opts;
+  renderProductOptions();
+}
+function updatePowerSet(i,key,val){
+  const opts=getProductOptions();
+  if(opts.powerSets&&opts.powerSets[i]) opts.powerSets[i][key]=val;
+  settings.productOptions=opts;
+}
+function applyPowersPreset(val){
+  if(!val) return;
+  const opts=getProductOptions();
+  const ps=(opts.powerSets||[]).find(x=>x.name===val);
+  if(ps){ const el=$('f-powers'); if(el) el.value=ps.powers; }
+}
+// 填充商品 modal 的 select 選項
+function populateProductSelects(){
+  const opts=getProductOptions();
+  const catSel=$('f-cat'), brandSel=$('f-brand'), pwSel=$('f-powers-preset');
+  if(catSel){
+    const cur=catSel.value;
+    catSel.innerHTML='<option value="">（選擇分類）</option>'
+      +(opts.cats||[]).map(c=>`<option value="${c}">${c}</option>`).join('');
+    if(cur) catSel.value=cur;
+  }
+  if(brandSel){
+    const cur=brandSel.value;
+    brandSel.innerHTML='<option value="">（選擇品牌）</option>'
+      +(opts.brands||[]).map(b=>`<option value="${b}">${b}</option>`).join('');
+    if(cur) brandSel.value=cur;
+  }
+  if(pwSel){
+    pwSel.innerHTML='<option value="">（選擇預設組合）</option>'
+      +(opts.powerSets||[]).map(ps=>`<option value="${ps.name}">${ps.name}</option>`).join('');
+  }
+}
+
 function loadSettingsForm(){
   $('cfg-title').value=settings.title||'';
   $('cfg-desc').value=settings.desc||'';
@@ -1174,6 +1343,7 @@ function loadSettingsForm(){
   $('cfg-free-ship-text').value=settings.freeShipText||'';
   $('cfg-pay-reminder').value=settings.payReminder||'';
   $('cfg-success-msg').value=settings.successMsg||'';
+  renderProductOptions();
   renderFieldsTable();
 }
 
@@ -1284,9 +1454,9 @@ function renderStore(){
     // descProd 只在加入購物車 modal 顯示，不顯示在卡片
     return `<div class="p-card${inCart?' in-cart':''}">
       ${inCart?`<div class="cart-badge-card">${cartQty}</div>`:''}
-      ${imgHtml}
+      <div onclick="openProductDetail('${p._docId}')" style="cursor:pointer">${imgHtml}</div>
       <div class="p-body">
-        <div class="p-name">${p.name}</div>
+        <div class="p-name" onclick="openProductDetail('${p._docId}')" style="cursor:pointer">${p.name}</div>
         <div class="p-cat">${p.cat||''}</div>
         ${gdiaH}${tagH}${origH}
         <div class="p-price">NT$${Number(p.price).toLocaleString()}</div>
@@ -1296,7 +1466,38 @@ function renderStore(){
   }).join('');
 }
 
-// Image slideshow on card
+// ── 商品詳情 modal（前台）────────────────────────
+function openProductDetail(docId){
+  const p=products.find(x=>x._docId===docId); if(!p) return;
+  // 圖片
+  const imgs=(p.images||[]).filter(Boolean);
+  const pdImg=$('pd-img');
+  if(imgs.length){
+    const thumbs=imgs.length>1
+      ?`<div class="modal-img-thumbs">${imgs.map((u,i)=>`<img class="modal-img-thumb${i===0?' active':''}" src="${u}" onclick="modalSwitchImg(this,'${u}')" onerror="this.style.display='none'">`).join('')}</div>`:'';
+    pdImg.innerHTML=`<img id="pd-main-img" class="modal-main-img" src="${imgs[0]}" onerror="this.style.display='none'">${thumbs}`;
+  } else {
+    pdImg.innerHTML='<div style="height:120px;background:var(--ft-bg);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:40px">👁</div>';
+  }
+  $('pd-name').textContent=p.name;
+  // meta 資訊
+  const meta=[];
+  if(p.brand) meta.push(`<span>🏷 ${p.brand}</span>`);
+  if(p.cat)   meta.push(`<span>📁 ${p.cat}</span>`);
+  if(p.gdia)  meta.push(`<span>⭕ G.DIA ${p.gdia}</span>`);
+  if(p.tag==='hot') meta.push('<span class="p-tag tag-hot">🔥 熱銷</span>');
+  if(p.tag==='new') meta.push('<span class="p-tag tag-new">✨ 新品</span>');
+  $('pd-meta').innerHTML=meta.join('');
+  // 價格
+  $('pd-price').innerHTML=`NT$${Number(p.price).toLocaleString()}`
+    +(p.origPrice?` <span style="font-size:13px;color:var(--ft-sub);text-decoration:line-through;font-weight:400">NT$${Number(p.origPrice).toLocaleString()}</span>`:'');
+  // 備註
+  $('pd-desc').textContent=p.descProd||'';
+  $('pd-desc').style.display=p.descProd?'':'none';
+  // 加入購物車按鈕
+  $('pd-add-btn').onclick=()=>{ closeModal('modal-product-detail'); openCartModal(docId); };
+  $('modal-product-detail').classList.add('open');
+}
 const slideIdx={};
 function slideImg(e,docId,dir){
   e.stopPropagation();
@@ -1668,6 +1869,7 @@ function openProductModal(docId=null){
   $('edit-id').value=docId||'';
   $('modal-product-title').textContent=docId?'編輯商品':'新增商品';
   pendingImgs=[];
+  populateProductSelects(); // 先填充選項
   if(docId){
     const p=products.find(x=>x._docId===docId);
     if(!p){ alert('找不到商品資料'); return; }
@@ -2280,6 +2482,7 @@ document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{
 // ── Expose globals ────────────────────────────────
 Object.assign(window,{
   filterType,slideImg,openCartModal,selectCartColor,modalSwitchImg,confirmAddToCart,removeFromCart,
+  openProductDetail,
   setStoreSearch,goCheckoutStep,goProductStep,goCartStep,backToStore,
   selectCvs,selectPay,submitOrder,doLookup,
   doLogin,logout,switchTab,
@@ -2291,7 +2494,9 @@ Object.assign(window,{
   toggleOrderField,updateOrderNote,
   renderDiscountAdmin,addDiscRule,removeDiscRule,discField,saveDiscounts,
   openPayModal,editPayMethod,savePayMethod,deletePayMethod,togglePayFields,
-  saveSettings,addFieldRow,removeField,removeFieldConfirm,updateField,fieldDragStart,fieldDragOver,fieldDrop,fieldDragEnd,closeModal,batchDeleteOrders
+  saveSettings,addFieldRow,removeField,removeFieldConfirm,updateField,fieldDragStart,fieldDragOver,fieldDrop,fieldDragEnd,
+  addProductOpt,removeProductOpt,addPowerSet,removePowerSet,updatePowerSet,applyPowersPreset,
+  closeModal,batchDeleteOrders
 });
 
 // ── Init ──────────────────────────────────────────
