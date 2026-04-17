@@ -93,7 +93,7 @@ body{font-family:'Apple SD Gothic Neo',-apple-system,BlinkMacSystemFont,'Segoe U
 .store-header h1{font-size:22px;font-weight:700;letter-spacing:.06em;color:var(--ft-text)}
 .store-header .sdesc{font-size:13px;color:var(--ft-sub);margin-top:8px;white-space:pre-line;line-height:1.7;letter-spacing:.02em}
 .deadline-badge{display:inline-block;background:var(--ft-gold-light);color:var(--ft-gold);font-size:11px;padding:4px 14px;border-radius:20px;margin-top:10px;font-weight:500;letter-spacing:.04em}
-.announce-box{background:var(--ft-gold-light);border:1px solid var(--ft-accent);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--ft-gold);margin-top:12px;text-align:left;white-space:pre-line;line-height:1.7}
+.announce-box{background:var(--ft-gold-light);border:1px solid var(--ft-accent);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--ft-gold);margin-top:12px;text-align:center;white-space:pre-line;line-height:1.7}
 .closed-banner{background:#FDF0EE;color:#B04030;border-radius:10px;padding:14px;font-size:14px;font-weight:600;margin-bottom:1rem;text-align:center;white-space:pre-line;line-height:1.6;border:1px solid #F5C5BE}
 
 /* ── FILTER BAR ── */
@@ -1436,16 +1436,21 @@ function renderStore(){
     let imgHtml='';
     if(imgs.length){
       const dots=imgs.length>1?`<div class="p-img-dots">${imgs.map((_,i)=>`<div class="p-img-dot${i===0?' active':''}" id="dot-${p._docId}-${i}"></div>`).join('')}</div>`:'';
-      const arrows=imgs.length>1?`<button class="p-slide-prev" onclick="slideImg(event,'${p._docId}',-1)">‹</button><button class="p-slide-next" onclick="slideImg(event,'${p._docId}',1)">›</button>`:'';
-      imgHtml=`<div class="p-img-wrap" id="imgwrap-${p._docId}">
-        ${imgs.map((u,i)=>`<img class="p-img-el" src="${i===0?u:''}" data-src="${u}" alt="" loading="lazy" style="display:${i===0?'block':'none'};width:100%;height:100%;object-fit:contain;position:${i===0?'relative':'absolute'};inset:0" onerror="this.style.display='none'">`).join('')}
-        <div class="p-img-overlay"><button class="p-img-overlay-btn" onclick="openCartModal('${p._docId}')">加入購物車</button></div>
+      const arrows=imgs.length>1
+        ?`<button class="p-slide-prev" onclick="event.stopPropagation();slideImg(event,'${p._docId}',-1)">‹</button>
+          <button class="p-slide-next" onclick="event.stopPropagation();slideImg(event,'${p._docId}',1)">›</button>`:'';
+      // 圖片用 opacity 切換，避免 position 問題
+      imgHtml=`<div class="p-img-wrap" id="imgwrap-${p._docId}" onclick="openProductDetail('${p._docId}')" style="cursor:pointer">
+        ${imgs.map((u,i)=>`<img class="p-img-el" src="${u}" alt="" loading="lazy"
+          style="display:${i===0?'block':'none'};width:100%;height:100%;object-fit:contain;position:${i===0?'relative':'absolute'};inset:0;top:0;left:0"
+          onerror="this.style.display='none'">`).join('')}
+        <div class="p-img-overlay"><button class="p-img-overlay-btn" onclick="event.stopPropagation();openCartModal('${p._docId}')">加入購物車</button></div>
         ${dots}${arrows}
       </div>`;
     } else {
-      imgHtml=`<div class="p-img-wrap" id="imgwrap-${p._docId}" style="aspect-ratio:1;background:var(--gray-bg);display:flex;align-items:center;justify-content:center;font-size:36px;position:relative">
+      imgHtml=`<div class="p-img-wrap" id="imgwrap-${p._docId}" onclick="openProductDetail('${p._docId}')" style="aspect-ratio:1;background:var(--gray-bg);display:flex;align-items:center;justify-content:center;font-size:36px;position:relative;cursor:pointer">
         👁
-        <div class="p-img-overlay"><button class="p-img-overlay-btn" onclick="openCartModal('${p._docId}')">加入購物車</button></div>
+        <div class="p-img-overlay"><button class="p-img-overlay-btn" onclick="event.stopPropagation();openCartModal('${p._docId}')">加入購物車</button></div>
       </div>`;
     }
     const tagH=p.tag==='hot'?'<span class="p-tag tag-hot">🔥 熱銷</span>':p.tag==='new'?'<span class="p-tag tag-new">✨ 新品</span>':'';
@@ -1454,7 +1459,7 @@ function renderStore(){
     // descProd 只在加入購物車 modal 顯示，不顯示在卡片
     return `<div class="p-card${inCart?' in-cart':''}">
       ${inCart?`<div class="cart-badge-card">${cartQty}</div>`:''}
-      <div onclick="openProductDetail('${p._docId}')" style="cursor:pointer">${imgHtml}</div>
+      ${imgHtml}
       <div class="p-body">
         <div class="p-name" onclick="openProductDetail('${p._docId}')" style="cursor:pointer">${p.name}</div>
         <div class="p-cat">${p.cat||''}</div>
@@ -1469,18 +1474,38 @@ function renderStore(){
 // ── 商品詳情 modal（前台）────────────────────────
 function openProductDetail(docId){
   const p=products.find(x=>x._docId===docId); if(!p) return;
-  // 圖片
   const imgs=(p.images||[]).filter(Boolean);
   const pdImg=$('pd-img');
-  if(imgs.length){
-    const thumbs=imgs.length>1
-      ?`<div class="modal-img-thumbs">${imgs.map((u,i)=>`<img class="modal-img-thumb${i===0?' active':''}" src="${u}" onclick="modalSwitchImg(this,'${u}')" onerror="this.style.display='none'">`).join('')}</div>`:'';
-    pdImg.innerHTML=`<img id="pd-main-img" class="modal-main-img" src="${imgs[0]}" onerror="this.style.display='none'">${thumbs}`;
-  } else {
-    pdImg.innerHTML='<div style="height:120px;background:var(--ft-bg);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:40px">👁</div>';
+  let curIdx=0;
+
+  function renderDetailImgs(idx){
+    curIdx=idx;
+    if(!imgs.length){
+      pdImg.innerHTML='<div style="height:160px;background:var(--ft-bg);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:40px">👁</div>';
+      return;
+    }
+    const thumbsHtml=imgs.length>1
+      ?`<div class="modal-img-thumbs">${imgs.map((u,i)=>`<img class="modal-img-thumb${i===idx?' active':''}" src="${u}"
+          onclick="openProductDetailImg('${docId}',${i})" onerror="this.style.display='none'">`).join('')}</div>`:'';
+    const arrowsHtml=imgs.length>1
+      ?`<div style="display:flex;justify-content:space-between;margin-top:6px">
+          <button onclick="openProductDetailImg('${docId}',${((idx-1)+imgs.length)%imgs.length})"
+            style="background:var(--ft-bg);border:1px solid var(--ft-border);border-radius:8px;padding:4px 14px;cursor:pointer;font-size:18px;color:var(--ft-text)">‹</button>
+          <span style="font-size:11px;color:var(--ft-sub);align-self:center">${idx+1} / ${imgs.length}</span>
+          <button onclick="openProductDetailImg('${docId}',${(idx+1)%imgs.length})"
+            style="background:var(--ft-bg);border:1px solid var(--ft-border);border-radius:8px;padding:4px 14px;cursor:pointer;font-size:18px;color:var(--ft-text)">›</button>
+        </div>`:'';
+    pdImg.innerHTML=`<img id="pd-main-img" class="modal-main-img" src="${imgs[idx]}" onerror="this.style.display='none'">${thumbsHtml}${arrowsHtml}`;
   }
+
+  // 把切換函數掛到 window 讓 inline onclick 能呼叫
+  window.openProductDetailImg=(id,idx)=>{
+    if(id!==docId) return;
+    renderDetailImgs(idx);
+  };
+
+  renderDetailImgs(0);
   $('pd-name').textContent=p.name;
-  // meta 資訊
   const meta=[];
   if(p.brand) meta.push(`<span>🏷 ${p.brand}</span>`);
   if(p.cat)   meta.push(`<span>📁 ${p.cat}</span>`);
@@ -1488,31 +1513,28 @@ function openProductDetail(docId){
   if(p.tag==='hot') meta.push('<span class="p-tag tag-hot">🔥 熱銷</span>');
   if(p.tag==='new') meta.push('<span class="p-tag tag-new">✨ 新品</span>');
   $('pd-meta').innerHTML=meta.join('');
-  // 價格
   $('pd-price').innerHTML=`NT$${Number(p.price).toLocaleString()}`
     +(p.origPrice?` <span style="font-size:13px;color:var(--ft-sub);text-decoration:line-through;font-weight:400">NT$${Number(p.origPrice).toLocaleString()}</span>`:'');
-  // 備註
   $('pd-desc').textContent=p.descProd||'';
   $('pd-desc').style.display=p.descProd?'':'none';
-  // 加入購物車按鈕
   $('pd-add-btn').onclick=()=>{ closeModal('modal-product-detail'); openCartModal(docId); };
   $('modal-product-detail').classList.add('open');
 }
 const slideIdx={};
-function slideImg(e,docId,dir){
-  e.stopPropagation();
-  const p=products.find(x=>x._docId===docId);
+function slideImg(e, docId, dir){
+  if(e){ e.stopPropagation(); e.preventDefault(); }
+  const p=products.find(x=>x._docId===docId); if(!p) return;
   const imgs=(p.images||[]).filter(Boolean);
   if(imgs.length<2) return;
-  slideIdx[docId]=(( (slideIdx[docId]||0)+dir)+imgs.length)%imgs.length;
-  const wrap=$('imgwrap-'+docId);
+  const cur=slideIdx[docId]||0;
+  const next=((cur+dir)+imgs.length)%imgs.length;
+  slideIdx[docId]=next;
+  const wrap=$('imgwrap-'+docId); if(!wrap) return;
   wrap.querySelectorAll('.p-img-el').forEach((el,i)=>{
-    // lazy: load src on first show
-    if(i===slideIdx[docId]&&!el.src&&el.dataset.src) el.src=el.dataset.src;
-    el.style.display=i===slideIdx[docId]?'block':'none';
-    el.style.position=i===slideIdx[docId]?'relative':'absolute';
+    el.style.display=i===next?'block':'none';
+    el.style.position=i===next?'relative':'absolute';
   });
-  wrap.querySelectorAll('.p-img-dot').forEach((d,i)=>d.classList.toggle('active',i===slideIdx[docId]));
+  wrap.querySelectorAll('.p-img-dot').forEach((d,i)=>d.classList.toggle('active',i===next));
 }
 
 // ── Cart modal (前台) ─────────────────────────────
