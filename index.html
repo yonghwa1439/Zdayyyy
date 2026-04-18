@@ -467,34 +467,32 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:poin
       <button class="btn btn-sm" onclick="batchProductActive(false)">批次下架</button>
       <button class="btn btn-sm" onclick="clearProductSel()">取消選擇</button>
     </div>
-    <div class="toolbar">
-      <input type="checkbox" id="product-sel-all" title="全選" onchange="toggleProductSelAll(this.checked)" style="margin-right:4px">
-      <input class="search-input" type="text" id="product-search-q" placeholder="搜尋商品…" oninput="renderProductTable()">
-      <div class="toolbar-right"><button class="btn btn-sm btn-primary" onclick="openProductModal()">＋ 新增商品</button></div>
-    </div>
-    <!-- 進階篩選列 -->
-    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;align-items:center">
-      <select id="pf-brand" class="search-input" style="width:120px" onchange="renderProductTable()">
-        <option value="">品牌（全部）</option>
+    <div class="toolbar" style="flex-wrap:wrap;gap:8px">
+      <input type="checkbox" id="product-sel-all" title="全選" onchange="toggleProductSelAll(this.checked)" style="margin-right:4px;flex-shrink:0">
+      <input class="search-input" type="text" id="product-search-q" placeholder="🔍 搜尋商品名稱、品牌、分類…" oninput="renderProductTable()" style="flex:1;min-width:160px;max-width:280px">
+      <select id="pf-cat" class="search-input" style="min-width:90px" onchange="renderProductTable()">
+        <option value="">分類：全部</option>
       </select>
-      <select id="pf-cat" class="search-input" style="width:110px" onchange="renderProductTable()">
-        <option value="">分類（全部）</option>
+      <select id="pf-brand" class="search-input" style="min-width:100px" onchange="renderProductTable()">
+        <option value="">品牌：全部</option>
       </select>
-      <select id="pf-deg" class="search-input" style="width:120px" onchange="renderProductTable()">
-        <option value="">度數模式（全部）</option>
+      <select id="pf-gdia" class="search-input" style="min-width:100px" onchange="renderProductTable()">
+        <option value="">G.DIA：全部</option>
+      </select>
+      <select id="pf-deg" class="search-input" style="min-width:100px" onchange="renderProductTable()">
+        <option value="">度數：全部</option>
         <option value="single">單度數</option>
         <option value="lr">左右眼</option>
       </select>
-      <select id="pf-gdia" class="search-input" style="width:110px" onchange="renderProductTable()">
-        <option value="">G.DIA（全部）</option>
-      </select>
-      <select id="pf-price-sort" class="search-input" style="width:120px" onchange="renderProductTable()">
+      <select id="pf-price-sort" class="search-input" style="min-width:100px" onchange="renderProductTable()">
         <option value="">售價排序</option>
-        <option value="asc">低→高</option>
-        <option value="desc">高→低</option>
+        <option value="asc">↑ 低→高</option>
+        <option value="desc">↓ 高→低</option>
       </select>
-      <button class="btn btn-sm" onclick="clearProductFilters()">清除篩選</button>
+      <button class="btn btn-sm" id="pf-clear-btn" onclick="clearProductFilters()" style="display:none">✕ 清除篩選</button>
+      <div class="toolbar-right"><button class="btn btn-sm btn-primary" onclick="openProductModal()">＋ 新增商品</button></div>
     </div>
+    <div id="product-filter-info" style="font-size:12px;color:var(--gray-text);margin-bottom:8px;padding:0 2px"></div>
     <div class="tbl-wrap"><table>
       <thead><tr><th style="width:36px"></th><th>圖片</th><th>商品名稱</th><th>品牌</th><th>分類</th><th>售價</th><th>原價</th><th>G.DIA</th><th>度數模式</th><th>狀態</th><th>操作</th></tr></thead>
       <tbody id="product-tbody"></tbody>
@@ -1421,12 +1419,20 @@ function populateProductSelects(){
 // 填充後台篩選列 select 選項
 function populateProductFilters(){
   const opts=getProductOptions();
-  const brands=(opts.brands||[]);
-  const cats=(opts.cats||[]);
+  const brands=(opts.brands||[]).length ? opts.brands : [...new Set(products.map(p=>p.brand).filter(Boolean))].sort();
+  const cats=(opts.cats||[]).length    ? opts.cats   : [...new Set(products.map(p=>p.cat).filter(Boolean))].sort();
   const gdias=[...new Set(products.map(p=>p.gdia).filter(Boolean))].sort();
-  const pf_b=$('pf-brand'); if(pf_b) pf_b.innerHTML='<option value="">品牌（全部）</option>'+brands.map(b=>`<option value="${b}">${b}</option>`).join('');
-  const pf_c=$('pf-cat'); if(pf_c) pf_c.innerHTML='<option value="">分類（全部）</option>'+cats.map(c=>`<option value="${c}">${c}</option>`).join('');
-  const pf_g=$('pf-gdia'); if(pf_g) pf_g.innerHTML='<option value="">G.DIA（全部）</option>'+gdias.map(g=>`<option value="${g}">${g}</option>`).join('');
+
+  const _fill=(id, label, items)=>{
+    const el=$(id); if(!el) return;
+    const cur=el.value; // 保留當前選中值
+    el.innerHTML=`<option value="">${label}：全部</option>`+items.map(v=>`<option value="${v}">${v}</option>`).join('');
+    if(cur && items.includes(cur)) el.value=cur; // 還原選中值
+  };
+  _fill('pf-brand','品牌', brands);
+  _fill('pf-cat',  '分類', cats);
+  _fill('pf-gdia', 'G.DIA', gdias);
+  // deg 和 price-sort 不需動態填充（固定選項）
 }
 
 
@@ -1965,26 +1971,67 @@ function refreshStats(){
 }
 
 // ── Products admin ────────────────────────────────
-function renderProductTable(q=''){
-  const searchQ=($('product-search-q')?.value||q||'').trim();
-  const fBrand=$('pf-brand')?.value||'';
-  const fCat=$('pf-cat')?.value||'';
-  const fDeg=$('pf-deg')?.value||'';
-  const fGdia=$('pf-gdia')?.value||'';
-  const fPriceSort=$('pf-price-sort')?.value||'';
+function renderProductTable(){
+  // 讀取所有篩選值
+  const searchQ=($('product-search-q')?.value||'').trim().toLowerCase();
+  const fCat   =$('pf-cat')?.value||'';
+  const fBrand =$('pf-brand')?.value||'';
+  const fGdia  =$('pf-gdia')?.value||'';
+  const fDeg   =$('pf-deg')?.value||'';
+  const fSort  =$('pf-price-sort')?.value||'';
 
+  // 是否有任何篩選啟用
+  const hasFilter=!!(searchQ||fCat||fBrand||fGdia||fDeg||fSort);
+  const clearBtn=$('pf-clear-btn');
+  if(clearBtn) clearBtn.style.display=hasFilter?'':'none';
+
+  // 過濾（AND 條件）
   let list=products.filter(p=>{
-    if(searchQ&&!p.name.includes(searchQ)&&!(p.cat||'').includes(searchQ)&&!(p.brand||'').includes(searchQ)) return false;
-    if(fBrand&&p.brand!==fBrand) return false;
-    if(fCat&&p.cat!==fCat) return false;
-    if(fDeg&&p.degMode!==fDeg) return false;
-    if(fGdia&&p.gdia!==fGdia) return false;
+    if(searchQ){
+      const hay=[p.name,p.cat,p.brand,p.gdia,p.descProd].filter(Boolean).join(' ').toLowerCase();
+      if(!hay.includes(searchQ)) return false;
+    }
+    if(fCat   && p.cat    !==fCat)    return false;
+    if(fBrand && p.brand  !==fBrand)  return false;
+    if(fGdia  && p.gdia   !==fGdia)   return false;
+    if(fDeg   && p.degMode!==fDeg)    return false;
     return true;
   });
-  if(fPriceSort==='asc') list=[...list].sort((a,b)=>a.price-b.price);
-  else if(fPriceSort==='desc') list=[...list].sort((a,b)=>b.price-a.price);
 
-  $('product-tbody').innerHTML=list.map(p=>{
+  // 排序
+  if(fSort==='asc')  list=[...list].sort((a,b)=>a.price-b.price);
+  if(fSort==='desc') list=[...list].sort((a,b)=>b.price-a.price);
+
+  // 更新篩選結果資訊列
+  const infoEl=$('product-filter-info');
+  if(infoEl){
+    if(hasFilter){
+      const active=[];
+      if(searchQ)  active.push(`關鍵字：「${searchQ}」`);
+      if(fCat)     active.push(`分類：${fCat}`);
+      if(fBrand)   active.push(`品牌：${fBrand}`);
+      if(fGdia)    active.push(`G.DIA：${fGdia}`);
+      if(fDeg)     active.push(`度數：${fDeg==='single'?'單度數':'左右眼'}`);
+      if(fSort)    active.push(`排序：售價${fSort==='asc'?'低→高':'高→低'}`);
+      infoEl.innerHTML=`篩選條件：<b style="color:var(--teal-dark)">${active.join('　')}</b>
+        ／篩選後共 <b style="color:var(--teal-dark)">${list.length}</b> 筆商品
+        （全部 ${products.length} 筆）`;
+    } else {
+      infoEl.textContent=`共 ${products.length} 筆商品`;
+    }
+  }
+
+  // 渲染表格
+  const tbody=$('product-tbody');
+  if(!tbody) return;
+  if(!list.length){
+    tbody.innerHTML=`<tr><td colspan="11" style="text-align:center;color:#aaa;padding:2rem">
+      ${hasFilter?'找不到符合篩選條件的商品。<button class="btn btn-sm" style="margin-left:8px" onclick="clearProductFilters()">清除篩選</button>':'尚無商品'}
+    </td></tr>`;
+    refreshStats(); return;
+  }
+
+  tbody.innerHTML=list.map(p=>{
     const imgH=(p.images&&p.images[0])
       ?`<div class="img-preview-sm"><img src="${p.images[0]}" alt="" onerror="this.parentElement.innerHTML='👁'"></div>`
       :`<div class="img-preview-sm">👁</div>`;
