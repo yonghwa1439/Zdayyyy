@@ -346,6 +346,9 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:poin
       <a href="#/lookup" class="store-tools-link">查詢訂單</a>
     </div>
     <div class="filter-bar" id="filter-bar"></div>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+      <span id="store-count" style="font-size:12px;color:var(--ft-sub);letter-spacing:.03em"></span>
+    </div>
     <div class="product-grid" id="store-products"></div>
     <!-- Cart -->
     <div class="order-panel" id="cart-panel">
@@ -466,8 +469,31 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:poin
     </div>
     <div class="toolbar">
       <input type="checkbox" id="product-sel-all" title="全選" onchange="toggleProductSelAll(this.checked)" style="margin-right:4px">
-      <input class="search-input" type="text" placeholder="搜尋商品…" oninput="renderProductTable(this.value)">
+      <input class="search-input" type="text" id="product-search-q" placeholder="搜尋商品…" oninput="renderProductTable()">
       <div class="toolbar-right"><button class="btn btn-sm btn-primary" onclick="openProductModal()">＋ 新增商品</button></div>
+    </div>
+    <!-- 進階篩選列 -->
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;align-items:center">
+      <select id="pf-brand" class="search-input" style="width:120px" onchange="renderProductTable()">
+        <option value="">品牌（全部）</option>
+      </select>
+      <select id="pf-cat" class="search-input" style="width:110px" onchange="renderProductTable()">
+        <option value="">分類（全部）</option>
+      </select>
+      <select id="pf-deg" class="search-input" style="width:120px" onchange="renderProductTable()">
+        <option value="">度數模式（全部）</option>
+        <option value="single">單度數</option>
+        <option value="lr">左右眼</option>
+      </select>
+      <select id="pf-gdia" class="search-input" style="width:110px" onchange="renderProductTable()">
+        <option value="">G.DIA（全部）</option>
+      </select>
+      <select id="pf-price-sort" class="search-input" style="width:120px" onchange="renderProductTable()">
+        <option value="">售價排序</option>
+        <option value="asc">低→高</option>
+        <option value="desc">高→低</option>
+      </select>
+      <button class="btn btn-sm" onclick="clearProductFilters()">清除篩選</button>
     </div>
     <div class="tbl-wrap"><table>
       <thead><tr><th style="width:36px"></th><th>圖片</th><th>商品名稱</th><th>品牌</th><th>分類</th><th>售價</th><th>原價</th><th>G.DIA</th><th>度數模式</th><th>狀態</th><th>操作</th></tr></thead>
@@ -557,27 +583,29 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:poin
       </div>
       <div class="settings-section">
         <h3>🏷 商品選項管理</h3>
-        <p style="font-size:12px;color:var(--gray-text);margin-bottom:12px">管理新增／編輯商品時的分類、品牌、度數選項。</p>
-        <div class="field-row">
+        <p style="font-size:12px;color:var(--gray-text);margin-bottom:12px">管理新增／編輯商品時的分類、品牌、度數選項。點選名稱可修改。</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
           <div>
-            <div style="font-size:13px;font-weight:600;margin-bottom:6px;color:var(--text-sub)">分類</div>
-            <div id="opt-cats-list" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
+            <div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--text-sub)">分類</div>
+            <div id="opt-cats-list" style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px"></div>
             <div style="display:flex;gap:6px">
-              <input type="text" id="opt-cat-input" placeholder="新分類名稱" style="flex:1;padding:6px 9px;border:1px solid var(--gray-border);border-radius:7px;font-size:13px;outline:none">
+              <input type="text" id="opt-cat-input" placeholder="新分類名稱" style="flex:1;padding:6px 9px;border:1px solid var(--gray-border);border-radius:7px;font-size:13px;outline:none"
+                onkeydown="if(event.key==='Enter')addProductOpt('cats')">
               <button class="btn btn-sm btn-primary" onclick="addProductOpt('cats')">＋</button>
             </div>
           </div>
           <div>
-            <div style="font-size:13px;font-weight:600;margin-bottom:6px;color:var(--text-sub)">品牌</div>
-            <div id="opt-brands-list" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px"></div>
+            <div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--text-sub)">品牌</div>
+            <div id="opt-brands-list" style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px"></div>
             <div style="display:flex;gap:6px">
-              <input type="text" id="opt-brand-input" placeholder="新品牌名稱" style="flex:1;padding:6px 9px;border:1px solid var(--gray-border);border-radius:7px;font-size:13px;outline:none">
+              <input type="text" id="opt-brand-input" placeholder="新品牌名稱" style="flex:1;padding:6px 9px;border:1px solid var(--gray-border);border-radius:7px;font-size:13px;outline:none"
+                onkeydown="if(event.key==='Enter')addProductOpt('brands')">
               <button class="btn btn-sm btn-primary" onclick="addProductOpt('brands')">＋</button>
             </div>
           </div>
         </div>
-        <div style="margin-top:14px">
-          <div style="font-size:13px;font-weight:600;margin-bottom:6px;color:var(--text-sub)">度數預設組合</div>
+        <div>
+          <div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--text-sub)">度數預設組合</div>
           <div id="opt-powers-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px"></div>
           <button class="btn btn-sm btn-primary" onclick="addPowerSet()">＋ 新增度數組合</button>
         </div>
@@ -1237,24 +1265,29 @@ function applySettings(){
 function getProductOptions(){
   return settings.productOptions || {cats:[],brands:[],powerSets:[]};
 }
+
 function renderProductOptions(){
   const opts=getProductOptions();
-  // 分類 tags
-  const catsList=$('opt-cats-list');
-  if(catsList) catsList.innerHTML=(opts.cats||[]).map((c,i)=>
-    `<span style="display:inline-flex;align-items:center;gap:4px;background:var(--teal-light);color:var(--teal-dark);border-radius:20px;padding:3px 10px;font-size:12px">
-      ${c}<button type="button" onclick="removeProductOpt('cats',${i})" style="background:none;border:none;cursor:pointer;color:var(--teal-dark);font-size:14px;padding:0;line-height:1">×</button>
-    </span>`).join('');
-  // 品牌 tags
-  const brandsList=$('opt-brands-list');
-  if(brandsList) brandsList.innerHTML=(opts.brands||[]).map((b,i)=>
-    `<span style="display:inline-flex;align-items:center;gap:4px;background:var(--amber-light);color:var(--amber);border-radius:20px;padding:3px 10px;font-size:12px">
-      ${b}<button type="button" onclick="removeProductOpt('brands',${i})" style="background:none;border:none;cursor:pointer;color:var(--amber);font-size:14px;padding:0;line-height:1">×</button>
-    </span>`).join('');
+
+  // 通用：渲染可修改 tag 列表
+  function renderOptList(containerId, type, items, bgColor, textColor){
+    const el=$(containerId); if(!el) return;
+    el.innerHTML=items.map((v,i)=>`
+      <div style="display:flex;align-items:center;gap:6px;background:${bgColor};border-radius:8px;padding:4px 8px">
+        <input type="text" value="${v}" style="flex:1;border:none;background:transparent;font-size:12px;color:${textColor};outline:none;min-width:60px"
+          onchange="renameProductOpt('${type}',${i},this.value)" onblur="renameProductOpt('${type}',${i},this.value)">
+        <button type="button" title="刪除" onclick="removeProductOpt('${type}',${i})"
+          style="background:none;border:none;cursor:pointer;color:${textColor};font-size:14px;opacity:.6;padding:0;line-height:1;flex-shrink:0">✕</button>
+      </div>`).join('');
+  }
+
+  renderOptList('opt-cats-list',   'cats',   opts.cats||[],   'var(--teal-light)',  'var(--teal-dark)');
+  renderOptList('opt-brands-list', 'brands', opts.brands||[], 'var(--amber-light)', 'var(--amber)');
+
   // 度數組合
   const pwList=$('opt-powers-list');
-  if(pwList) pwList.innerHTML=(opts.powerSets||[]).map((ps,i)=>
-    `<div style="display:flex;gap:6px;align-items:center;background:var(--gray-bg);border-radius:8px;padding:8px 10px">
+  if(pwList) pwList.innerHTML=(opts.powerSets||[]).map((ps,i)=>`
+    <div style="background:var(--gray-bg);border-radius:8px;padding:8px 10px;display:flex;gap:6px;align-items:flex-start">
       <div style="flex:1">
         <input type="text" value="${ps.name}" placeholder="組合名稱"
           style="width:100%;padding:4px 8px;border:1px solid var(--gray-border);border-radius:6px;font-size:12px;outline:none;margin-bottom:4px"
@@ -1263,27 +1296,79 @@ function renderProductOptions(){
           style="width:100%;padding:4px 8px;border:1px solid var(--gray-border);border-radius:6px;font-size:12px;outline:none"
           oninput="updatePowerSet(${i},'powers',this.value)">
       </div>
-      <button type="button" onclick="removePowerSet(${i})" style="background:none;border:none;cursor:pointer;color:var(--red);font-size:18px;padding:0 4px">✕</button>
+      <button type="button" onclick="removePowerSet(${i})"
+        style="background:none;border:none;cursor:pointer;color:var(--red);font-size:18px;padding:0 4px;flex-shrink:0">✕</button>
     </div>`).join('');
 }
+
 function addProductOpt(type){
   const inputId=type==='cats'?'opt-cat-input':'opt-brand-input';
   const inp=$(inputId); if(!inp) return;
-  const val=inp.value.trim(); if(!val) return;
+  const val=inp.value.trim(); if(!val){ inp.focus(); return; }
   const opts=getProductOptions();
-  if(!(opts[type]||[]).includes(val)){
-    opts[type]=[...(opts[type]||[]),val];
-    settings.productOptions=opts;
-  }
+  if((opts[type]||[]).includes(val)){ alert(`「${val}」已存在`); return; }
+  opts[type]=[...(opts[type]||[]),val];
+  settings.productOptions=opts;
   inp.value='';
   renderProductOptions();
 }
-function removeProductOpt(type,i){
+
+// 修改選項名稱，並同步更新已有商品資料
+async function renameProductOpt(type, i, newVal){
+  newVal=(newVal||'').trim();
   const opts=getProductOptions();
+  const arr=opts[type]||[];
+  const oldVal=arr[i];
+  if(!newVal||newVal===oldVal) return;
+  if(arr.includes(newVal)){ alert(`「${newVal}」已存在，請使用不同名稱`); renderProductOptions(); return; }
+  // 更新 settings
+  arr[i]=newVal;
+  opts[type]=arr;
+  settings.productOptions=opts;
+  // 同步更新商品資料（in memory）
+  const field=type==='cats'?'cat':'brand';
+  const affected=products.filter(p=>p[field]===oldVal);
+  if(affected.length>0){
+    loading(true);
+    try{
+      for(const p of affected){
+        p[field]=newVal;
+        await updateDoc(doc(db,'products',p._docId),{[field]:newVal});
+      }
+      // 同步優惠設定中的分類
+      if(type==='cats'){
+        let discChanged=false;
+        discounts.forEach(r=>{
+          if(r.cats&&r.cats.includes(oldVal)){
+            r.cats=r.cats.map(c=>c===oldVal?newVal:c);
+            discChanged=true;
+          }
+        });
+        if(discChanged) await setDoc(doc(db,'store','discounts'),{rules:discounts});
+      }
+    }catch(e){ alert('同步更新商品失敗：'+e.message); }
+    loading(false);
+  }
+  renderStore(); renderProductTable(); renderProductOptions();
+}
+
+// 刪除選項 — 先確認使用中商品數量
+function removeProductOpt(type, i){
+  const opts=getProductOptions();
+  const val=(opts[type]||[])[i];
+  if(!val) return;
+  const field=type==='cats'?'cat':'brand';
+  const count=products.filter(p=>p[field]===val).length;
+  if(count>0){
+    if(!confirm(`「${val}」目前有 ${count} 筆商品使用中。\n\n確定刪除後，這些商品的${type==='cats'?'分類':'品牌'}欄位將變為空白。\n\n確定要刪除嗎？`)) return;
+  } else {
+    if(!confirm(`確定刪除「${val}」？`)) return;
+  }
   opts[type]=(opts[type]||[]).filter((_,idx)=>idx!==i);
   settings.productOptions=opts;
   renderProductOptions();
 }
+
 function addPowerSet(){
   const opts=getProductOptions();
   opts.powerSets=[...(opts.powerSets||[]),{name:'新組合',powers:'無度數,-1.00,-2.00,-3.00,-4.00,-5.00,-6.00'}];
@@ -1291,9 +1376,11 @@ function addPowerSet(){
   renderProductOptions();
 }
 function removePowerSet(i){
-  if(!confirm('確定刪除此度數組合？')) return;
   const opts=getProductOptions();
-  opts.powerSets=(opts.powerSets||[]).filter((_,idx)=>idx!==i);
+  const ps=(opts.powerSets||[])[i];
+  if(!ps) return;
+  if(!confirm(`確定刪除度數組合「${ps.name}」？`)) return;
+  opts.powerSets=opts.powerSets.filter((_,idx)=>idx!==i);
   settings.productOptions=opts;
   renderProductOptions();
 }
@@ -1308,6 +1395,7 @@ function applyPowersPreset(val){
   const ps=(opts.powerSets||[]).find(x=>x.name===val);
   if(ps){ const el=$('f-powers'); if(el) el.value=ps.powers; }
 }
+
 // 填充商品 modal 的 select 選項
 function populateProductSelects(){
   const opts=getProductOptions();
@@ -1329,6 +1417,18 @@ function populateProductSelects(){
       +(opts.powerSets||[]).map(ps=>`<option value="${ps.name}">${ps.name}</option>`).join('');
   }
 }
+
+// 填充後台篩選列 select 選項
+function populateProductFilters(){
+  const opts=getProductOptions();
+  const brands=(opts.brands||[]);
+  const cats=(opts.cats||[]);
+  const gdias=[...new Set(products.map(p=>p.gdia).filter(Boolean))].sort();
+  const pf_b=$('pf-brand'); if(pf_b) pf_b.innerHTML='<option value="">品牌（全部）</option>'+brands.map(b=>`<option value="${b}">${b}</option>`).join('');
+  const pf_c=$('pf-cat'); if(pf_c) pf_c.innerHTML='<option value="">分類（全部）</option>'+cats.map(c=>`<option value="${c}">${c}</option>`).join('');
+  const pf_g=$('pf-gdia'); if(pf_g) pf_g.innerHTML='<option value="">G.DIA（全部）</option>'+gdias.map(g=>`<option value="${g}">${g}</option>`).join('');
+}
+
 
 function loadSettingsForm(){
   $('cfg-title').value=settings.title||'';
@@ -1426,7 +1526,13 @@ function renderStore(){
     list=list.filter(p=>[p.name,p.cat,p.colors,p.descProd,p.gdia].filter(Boolean).join(' ').toLowerCase().includes(storeSearch));
   }
   const el=$('store-products');
-  if(!list.length){ el.innerHTML='<p style="color:#aaa;font-size:13px;padding:1rem 0;grid-column:1/-1">找不到符合的商品</p>'; return; }
+  const countEl=$('store-count');
+  if(!list.length){
+    el.innerHTML='<p style="color:#aaa;font-size:13px;padding:1rem 0;grid-column:1/-1">找不到符合的商品</p>';
+    if(countEl) countEl.textContent='共 0 款商品';
+    return;
+  }
+  if(countEl) countEl.textContent=`共 ${list.length} 款商品`;
   el.innerHTML=list.map(p=>{
     // 任何一個 key 以此 docId 開頭，代表有加入購物車
     const inCart=Object.keys(cart).some(k=>k.startsWith(p._docId+'|'));
@@ -1841,7 +1947,7 @@ function switchTab(tab){
     $('tc-'+t).classList.toggle('hidden',t!==tab);
     $('tab-'+t).classList.toggle('active',t===tab);
   });
-  if(tab==='products') renderProductTable();
+  if(tab==='products'){ populateProductFilters(); renderProductTable(); }
   if(tab==='orders')   renderOrderTable();
   if(tab==='discount') renderDiscountAdmin();
   if(tab==='payment')  renderPayMethodList();
@@ -1860,7 +1966,24 @@ function refreshStats(){
 
 // ── Products admin ────────────────────────────────
 function renderProductTable(q=''){
-  const list=products.filter(p=>!q||p.name.includes(q)||(p.cat||'').includes(q));
+  const searchQ=($('product-search-q')?.value||q||'').trim();
+  const fBrand=$('pf-brand')?.value||'';
+  const fCat=$('pf-cat')?.value||'';
+  const fDeg=$('pf-deg')?.value||'';
+  const fGdia=$('pf-gdia')?.value||'';
+  const fPriceSort=$('pf-price-sort')?.value||'';
+
+  let list=products.filter(p=>{
+    if(searchQ&&!p.name.includes(searchQ)&&!(p.cat||'').includes(searchQ)&&!(p.brand||'').includes(searchQ)) return false;
+    if(fBrand&&p.brand!==fBrand) return false;
+    if(fCat&&p.cat!==fCat) return false;
+    if(fDeg&&p.degMode!==fDeg) return false;
+    if(fGdia&&p.gdia!==fGdia) return false;
+    return true;
+  });
+  if(fPriceSort==='asc') list=[...list].sort((a,b)=>a.price-b.price);
+  else if(fPriceSort==='desc') list=[...list].sort((a,b)=>b.price-a.price);
+
   $('product-tbody').innerHTML=list.map(p=>{
     const imgH=(p.images&&p.images[0])
       ?`<div class="img-preview-sm"><img src="${p.images[0]}" alt="" onerror="this.parentElement.innerHTML='👁'"></div>`
@@ -1885,6 +2008,13 @@ function renderProductTable(q=''){
     </tr>`;
   }).join('');
   refreshStats();
+}
+
+function clearProductFilters(){
+  ['pf-brand','pf-cat','pf-deg','pf-gdia','pf-price-sort','product-search-q'].forEach(id=>{
+    const el=$(id); if(el) el.value='';
+  });
+  renderProductTable();
 }
 
 function openProductModal(docId=null){
@@ -2376,9 +2506,24 @@ function renderDiscountAdmin(){
 }
 
 function _discRuleHtml(r,i){
-  const cats=[...new Set(products.map(p=>p.cat).filter(Boolean))];
-  const catOpts=cats.map(c=>`<option value="${c}"${(r.cats||[]).includes(c)?'selected':''}>${c}</option>`).join('');
+  // 從 settings 取分類，而非從商品推算（確保同步）
+  const cats=(getProductOptions().cats||[]).length
+    ? getProductOptions().cats
+    : [...new Set(products.map(p=>p.cat).filter(Boolean))];
+  const selectedCats=r.cats||[];
   const isBundle=r.discType==='bundle';
+
+  // 勾選清單 + 已選 tag 顯示
+  const catCheckboxes=cats.map(c=>`
+    <label style="display:inline-flex;align-items:center;gap:4px;margin-right:10px;margin-bottom:4px;cursor:pointer;font-size:12px">
+      <input type="checkbox" ${selectedCats.includes(c)?'checked':''}
+        onchange="discToggleCat(${i},'${c.replace(/'/g,"\\'")}',this.checked)"
+        style="accent-color:var(--teal)"> ${c}
+    </label>`).join('');
+  const selectedTagHtml=selectedCats.length
+    ? selectedCats.map(c=>`<span style="background:var(--teal-light);color:var(--teal-dark);border-radius:12px;padding:2px 8px;font-size:11px">${c}</span>`).join(' ')
+    : '<span style="color:#aaa;font-size:12px">（尚未選取）</span>';
+
   return `<div class="disc-rule-row" id="discrow-${i}">
     <button class="btn btn-sm btn-danger disc-rule-del" onclick="removeDiscRule(${i})">刪除</button>
     <div class="field-row">
@@ -2391,7 +2536,14 @@ function _discRuleHtml(r,i){
       <option value="all"${r.scope==='all'?' selected':''}>全部商品</option>
       <option value="cat"${r.scope==='cat'?' selected':''}>指定分類</option>
     </select></div>
-    ${r.scope==='cat'?`<div class="field"><label>指定分類（可多選）</label><select multiple onchange="discField(${i},'cats',Array.from(this.selectedOptions).map(o=>o.value))" style="height:80px">${catOpts}</select></div>`:''}
+    ${r.scope==='cat'?`
+    <div class="field">
+      <label>指定分類 <span style="font-size:11px;color:var(--gray-text)">（可多選）</span></label>
+      <div style="background:var(--gray-bg);border-radius:8px;padding:8px 10px;margin-bottom:6px;display:flex;flex-wrap:wrap">${catCheckboxes||'<span style="color:#aaa;font-size:12px">請先在設定中新增分類</span>'}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;align-items:center">
+        <span style="font-size:11px;color:var(--text-sub);margin-right:4px">已選：</span>${selectedTagHtml}
+      </div>
+    </div>`:''}
     <div class="field-row">
       <div class="field"><label>購買數量門檻（副）</label><input type="number" min="1" value="${r.minQty||1}" oninput="discField(${i},'minQty',Number(this.value))" placeholder="3"></div>
       <div class="field"><label>折扣方式</label><select onchange="discField(${i},'discType',this.value);renderDiscountAdmin()">
@@ -2413,6 +2565,18 @@ function _discRuleHtml(r,i){
 }
 
 function discField(i,key,val){ discounts[i][key]=val; }
+function discToggleCat(i, cat, checked){
+  if(!discounts[i].cats) discounts[i].cats=[];
+  if(checked){ if(!discounts[i].cats.includes(cat)) discounts[i].cats.push(cat); }
+  else discounts[i].cats=discounts[i].cats.filter(c=>c!==cat);
+  // 即時更新 tag 顯示
+  const row=$('discrow-'+i);
+  if(row){
+    const tags=row.querySelectorAll('.disc-selected-tags');
+    // 重新渲染整個規則
+    renderDiscountAdmin();
+  }
+}
 function addDiscRule(){ discounts.push({name:'',active:true,scope:'all',cats:[],minQty:1,discType:'pct',discVal:95}); renderDiscountAdmin(); }
 function removeDiscRule(i){ discounts.splice(i,1); renderDiscountAdmin(); }
 
@@ -2517,7 +2681,8 @@ Object.assign(window,{
   renderDiscountAdmin,addDiscRule,removeDiscRule,discField,saveDiscounts,
   openPayModal,editPayMethod,savePayMethod,deletePayMethod,togglePayFields,
   saveSettings,addFieldRow,removeField,removeFieldConfirm,updateField,fieldDragStart,fieldDragOver,fieldDrop,fieldDragEnd,
-  addProductOpt,removeProductOpt,addPowerSet,removePowerSet,updatePowerSet,applyPowersPreset,
+  addProductOpt,removeProductOpt,renameProductOpt,addPowerSet,removePowerSet,updatePowerSet,applyPowersPreset,
+  clearProductFilters,discToggleCat,
   closeModal,batchDeleteOrders
 });
 
