@@ -1929,9 +1929,15 @@ async function submitOrder(){
 function selectCvs(t){ selectedCvs=t; $('cvs-711').classList.toggle('selected',t==='7-11'); $('cvs-family').classList.toggle('selected',t==='全家'); }
 
 // ── Auth ──────────────────────────────────────────
+const _ADMIN_WHITELIST=['yonghwa1439@gmail.com'];
+
 async function doLogin(){
   const email=$('pw-email').value.trim(), password=$('pw-input').value, errEl=$('pw-err');
   if(!email||!password){ errEl.textContent='請填寫 Email 和密碼'; errEl.classList.remove('hidden'); return; }
+  // 白名單驗證：不在清單內直接拒絕，不透露原因
+  if(!_ADMIN_WHITELIST.includes(email.toLowerCase())){
+    errEl.textContent='帳號或密碼錯誤'; errEl.classList.remove('hidden'); return;
+  }
   loading(true);
   try{ await signInWithEmailAndPassword(auth,email,password); }
   catch(e){
