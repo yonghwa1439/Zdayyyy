@@ -1851,17 +1851,24 @@ function renderPayInfo(){
 }
 
 // ── Submit order ──────────────────────────────────
+// 送單鎖，防止重複送出
+let isSubmitting=false;
+
 async function submitOrder(){
+  // ── 防重複送出 ────────────────────────────────
+  if(isSubmitting) return;
+
+  const btn=$('btn-submit');
+  const btnOrigText='確認下單';
+
+  // ── 欄位驗證 ─────────────────────────────────
   const fields=getFields().filter(f=>f.visible);
   const vals={};
-
-  // 動態讀取所有欄位值並驗證
   for(const f of fields){
     const el=$(`c-${f.key}`); if(!el) continue;
     const v=el.value.trim();
     vals[f.key]=v;
     if(f.required&&!v){ el.focus(); return alert(`請填寫「${f.label}」`); }
-    // 格式驗證
     if(f.key==='phone'&&v){
       if(!/^\d{10}$/.test(v.replace(/[-\s]/g,'')))
         return alert('聯絡電話請輸入完整 10 碼數字（例：0912345678）');
@@ -1874,23 +1881,36 @@ async function submitOrder(){
 
   if(!selectedCvs) return alert('請選擇取貨超商');
   if(!(vals.storeName||'').trim()) return alert('請填寫取貨門市名稱');
+
+  // ── 購物車驗證 ───────────────────────────────
   const cartItems=Object.values(cart);
-  if(!cartItems.length) return alert('請選擇至少一項商品');
+  if(!cartItems.length) return alert('購物車是空的，請先加入商品');
+  if(cartItems.some(i=>!i.name||!i.price||i.qty<1)){
+    return alert('購物車內有異常商品資料，請重新加入商品');
+  }
   if(!selectedPay) return alert('請選擇付款方式');
 
+  // ── 重新計算金額（不信任舊 state）────────────
   const payM=payMethods.find(p=>p._docId===selectedPay);
-  const sub=cartItems.reduce((s,i)=>s+i.price*i.qty,0);
+  const sub=cartItems.reduce((s,i)=>s+Number(i.price)*Number(i.qty),0);
+  if(sub<=0) return alert('訂單金額異常，請重新選購商品');
   const ship=calcShip(sub);
   const {discAmt,label:discLabel}=calcDiscount(cartItems);
   const total=Math.max(0,sub+ship-discAmt);
+  if(total<0) return alert('訂單金額計算異常，請聯繫客服');
+
+  // ── 鎖定送單，禁用按鈕 ───────────────────────
+  isSubmitting=true;
+  if(btn){ btn.disabled=true; btn.textContent='送出中…'; }
+
   const now=new Date();
   const time=`${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
   const orderNo=genOrderNo();
   const order={
     orderNo, time,
     name:    vals.name||'',
-    phone:   vals.phone||'',
-    ig:      vals.ig||'',
+    phone:   (vals.phone||'').replace(/[-\s]/g,''), // 統一格式存入
+    ig:      (vals.ig||'').replace(/^@/,''),         // 統一去掉 @ 存入
     email:   vals.email||'',
     cvs:     selectedCvs,
     storeName: vals.storeName||'',
@@ -1899,16 +1919,16 @@ async function submitOrder(){
     payMethod: payM?.name||'',
     items: cartItems.map(i=>({
       name:i.name, brand:i.brand||'', color:i.color||'', powerDisplay:i.powerDisplay||'',
-      qty:i.qty, price:i.price, subtotal:i.price*i.qty
+      qty:Number(i.qty), price:Number(i.price), subtotal:Number(i.price)*Number(i.qty)
     })),
     subtotal:sub, ship, discAmt, discLabel, total,
     paid:false, shipped:false, shippedDate:'', noteAccount:'', noteShip:'',
-    // 儲存自訂欄位值（擴充）
     extraFields: Object.fromEntries(
       fields.filter(f=>!['name','phone','ig','email','storeName','storeNo','note'].includes(f.key))
             .map(f=>[f.key, vals[f.key]||''])
     )
   };
+
   loading(true);
   try{
     const ref=await addDoc(collection(db,'orders'),order);
@@ -1922,7 +1942,13 @@ async function submitOrder(){
     $('success-order-no').textContent='訂單編號：'+orderNo;
     $('success-msg').textContent=settings.successMsg||'感謝您的訂購！';
     cart={}; clearCart(); updateCartCount();
-  }catch(e){ alert('❌ 下單失敗：'+e.message); }
+    // 成功後不恢復按鈕（已跳成功頁，不需要再送）
+  }catch(e){
+    // 失敗：解除鎖定，恢復按鈕
+    isSubmitting=false;
+    if(btn){ btn.disabled=false; btn.textContent=btnOrigText; }
+    alert('❌ 下單失敗：'+e.message);
+  }
   loading(false);
 }
 
@@ -2441,49 +2467,86 @@ async function batchDeleteOrders(){
 
 // ── Order lookup (front) — 完全匹配，防止查到他人訂單 ──
 async function doLookup(){
-  const q=$('lookup-input').value.trim();
+  const raw=$('lookup-input').value;
   const el=$('lookup-result');
-  if(!q){ el.innerHTML='<div style="color:var(--ft-sub);font-size:13px;text-align:center;padding:12px">請輸入查詢關鍵字</div>'; return; }
 
-  // ── 格式驗證 ──────────────────────────────────────
-  const isPhone=/^\d{10}$/.test(q);                        // 純10碼數字
-  const isOrderNo=/^ZD\d{6}-\d{4}$/.test(q);              // ZD250411-1234
-  const isIG=/^@/.test(q)||/^[a-zA-Z0-9._]{1,30}$/.test(q); // IG帳號
-
-  // 若看起來像電話但不是10碼，拒絕
-  if(/^\d+$/.test(q) && !isPhone){
-    el.innerHTML=`<div style="color:var(--red);font-size:13px;padding:12px;text-align:center">電話號碼需輸入完整 10 碼（例：0912345678）</div>`;
+  // 空白檢查
+  if(!raw||!raw.trim()){
+    el.innerHTML='<div style="color:var(--ft-sub);font-size:13px;text-align:center;padding:12px">請輸入完整的訂單編號、電話或 IG 帳號</div>';
     return;
   }
-  // 若看起來像訂單編號但格式不對，拒絕
-  if(q.startsWith('ZD') && !isOrderNo){
-    el.innerHTML=`<div style="color:var(--red);font-size:13px;padding:12px;text-align:center">訂單編號格式不正確（例：ZD250411-1234）</div>`;
+
+  const q=raw.trim();
+
+  // ── 正規化輸入 ────────────────────────────────
+  // 電話：移除所有非數字，判斷是否為10碼
+  const qPhone=q.replace(/[-\s]/g,'');
+  const isPhone=/^\d{10}$/.test(qPhone);
+  const looksLikePhone=/^\d+$/.test(q.replace(/[-\s]/g,''));
+
+  // 訂單編號：ZD開頭
+  const isOrderNo=/^ZD\d{6}-\d{4}$/i.test(q);
+  const looksLikeOrderNo=/^ZD/i.test(q);
+
+  // IG：其他情況（去掉 @ 後比對）
+  const qIG=q.replace(/^@/,'').trim().toLowerCase();
+
+  // 格式錯誤提示
+  if(looksLikePhone && !isPhone){
+    el.innerHTML=`<div style="color:var(--red);font-size:13px;padding:12px;text-align:center">
+      電話號碼需輸入完整 10 碼（例：0912345678）</div>`;
+    return;
+  }
+  if(looksLikeOrderNo && !isOrderNo){
+    el.innerHTML=`<div style="color:var(--red);font-size:13px;padding:12px;text-align:center">
+      訂單編號格式不正確（例：ZD250411-1234）</div>`;
     return;
   }
 
   el.innerHTML='<div style="text-align:center;color:var(--gray-text);padding:12px">查詢中…</div>';
+
   try{
     const snap=await getDocs(collection(db,'orders'));
     const allDocs=[];
     snap.forEach(d=>allDocs.push({...d.data(),_docId:d.id}));
 
-    // 完全匹配（不允許模糊搜尋）
+    // ── 完全比對（支援全部訂單，不只第一筆）────
     const results=allDocs.filter(o=>{
-      if(isPhone)   return (o.phone||'').replace(/\D/g,'')=== q.replace(/\D/g,'');
-      if(isOrderNo) return (o.orderNo||'')=== q;
-      // IG帳號：去掉 @ 後完全匹配
-      const inputIG=q.replace(/^@/,'').toLowerCase();
-      const orderIG=(o.ig||'').replace(/^@/,'').toLowerCase();
-      return orderIG===inputIG && orderIG!=='';
+      if(isOrderNo){
+        // 訂單編號：完整比對（不分大小寫）
+        return (o.orderNo||'').trim().toLowerCase()===q.toLowerCase();
+      }
+      if(isPhone){
+        // 電話：統一移除非數字後比對
+        const stored=(o.phone||'').replace(/[-\s\D]/g,'');
+        return stored===qPhone && stored!=='';
+      }
+      // IG：統一去掉 @ 並轉小寫後完整比對
+      const storedIG=(o.ig||'').replace(/^@/,'').trim().toLowerCase();
+      return storedIG===qIG && qIG!=='';
     });
 
     if(!results.length){
-      el.innerHTML='<div style="color:var(--ft-sub);font-size:13px;text-align:center;padding:16px">查無此訂單，請確認輸入是否正確</div>';
+      const hint=isPhone?'電話':isOrderNo?'訂單編號':'IG 帳號';
+      el.innerHTML=`<div style="color:var(--ft-sub);font-size:13px;text-align:center;padding:16px">
+        查無符合「${q}」的訂單<br>
+        <span style="font-size:12px;color:var(--gray-text)">請確認${hint}是否輸入正確（需完整輸入）</span>
+      </div>`;
       return;
     }
-    el.innerHTML=results.map(o=>{
-      const paidBadge=o.paid?'<span class="status-badge status-paid">已付款</span>':'<span class="status-badge status-unpaid">未付款</span>';
-      const shipBadge=o.shipped?`<span class="status-badge status-shipped">已出貨${o.shippedDate?' ('+o.shippedDate+')':''}</span>`:'<span class="status-badge status-unshipped">未出貨</span>';
+
+    // 多筆全部顯示，依時間倒序
+    const sorted=results.slice().sort((a,b)=>{
+      return (b.time||'').localeCompare(a.time||'');
+    });
+
+    el.innerHTML=sorted.map(o=>{
+      const paidBadge=o.paid
+        ?'<span class="status-badge status-paid">已付款</span>'
+        :'<span class="status-badge status-unpaid">未付款</span>';
+      const shipBadge=o.shipped
+        ?`<span class="status-badge status-shipped">已出貨${o.shippedDate?' ('+o.shippedDate+')':''}</span>`
+        :'<span class="status-badge status-unshipped">未出貨</span>';
       const itemsHtml=(o.items||[]).map(i=>`
         <div style="font-size:12px;color:var(--ft-sub);padding:4px 0;border-bottom:1px solid var(--ft-border)">
           ${i.name}${i.color?' ・'+i.color:''}${i.powerDisplay?' ・'+i.powerDisplay:''} ×${i.qty}
@@ -2494,11 +2557,18 @@ async function doLookup(){
         <div style="font-size:12px;color:var(--ft-sub);margin-bottom:8px">下單時間：${o.time}</div>
         ${itemsHtml}
         <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-          <span style="font-size:13px;font-weight:700;color:var(--ft-text)">總金額 NT$${o.total.toLocaleString()}</span>
+          <span style="font-size:13px;font-weight:700;color:var(--ft-text)">總金額 NT$${(o.total||0).toLocaleString()}</span>
           ${paidBadge} ${shipBadge}
         </div>
       </div>`;
     }).join('');
+
+    if(sorted.length>1){
+      el.insertAdjacentHTML('afterbegin',
+        `<div style="font-size:12px;color:var(--ft-sub);margin-bottom:8px;text-align:center">
+          共找到 ${sorted.length} 筆訂單</div>`);
+    }
+
   }catch(e){
     el.innerHTML=`<div style="color:var(--red);font-size:13px;padding:12px">查詢失敗：${e.message}</div>`;
   }
