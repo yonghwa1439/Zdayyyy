@@ -361,7 +361,26 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:poin
         <div class="disc-hint hidden" id="disc-hint"></div>
         <!-- 多優惠列表 -->
         <div id="disc-rows-container"></div>
+        <!-- 優惠碼折扣列（僅套用時顯示） -->
+        <div class="summary-row disc-row hidden" id="coupon-disc-row">
+          <span style="color:var(--red);font-size:12px">🎟 優惠碼折扣</span>
+          <span style="color:var(--red);font-weight:600" id="coupon-disc-amt"></span>
+        </div>
         <div class="summary-row total-row"><span>總金額</span><span class="amt" id="cart-grand">NT$0</span></div>
+        <!-- 優惠碼輸入區 -->
+        <div id="coupon-input-area" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--ft-border)">
+          <div style="font-size:12px;color:var(--ft-sub);margin-bottom:6px;font-weight:500">🎟 優惠碼</div>
+          <div style="display:flex;gap:8px">
+            <input type="text" id="coupon-code-input" placeholder="輸入優惠碼"
+              style="flex:1;padding:9px 12px;border:1.5px solid var(--ft-border);border-radius:10px;font-size:13px;outline:none;font-family:monospace;letter-spacing:.06em;text-transform:uppercase"
+              oninput="this.value=this.value.toUpperCase()"
+              onkeydown="if(event.key==='Enter')applyCoupon()">
+            <button id="coupon-apply-btn" onclick="applyCoupon()"
+              style="padding:9px 16px;background:var(--ft-gold);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .2s"
+              onmouseover="this.style.background='#96733F'" onmouseout="this.style.background='var(--ft-gold)'">套用</button>
+          </div>
+          <div id="coupon-msg" style="font-size:12px;margin-top:6px;min-height:18px"></div>
+        </div>
         <div class="step-actions">
           <button class="btn-ft-primary" id="btn-go-checkout" onclick="goCheckoutStep()">下一步：填寫訂購資料</button>
         </div>
@@ -451,6 +470,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:poin
     <button class="nav-btn active" id="tab-products" onclick="switchTab('products')">🛍 商品</button>
     <button class="nav-btn" id="tab-orders" onclick="switchTab('orders')">📦 訂單</button>
     <button class="nav-btn" id="tab-discount" onclick="switchTab('discount')">🏷 優惠</button>
+    <button class="nav-btn" id="tab-coupon" onclick="switchTab('coupon')">🎟 優惠碼</button>
     <button class="nav-btn" id="tab-payment" onclick="switchTab('payment')">💳 付款方式</button>
     <button class="nav-btn" id="tab-settings" onclick="switchTab('settings')">⚙️ 設定</button>
   </div>
@@ -526,7 +546,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:poin
       <div class="toolbar-right"><button class="btn btn-sm btn-primary" onclick="exportExcel()">📊 匯出 Excel</button></div>
     </div>
     <div class="tbl-wrap"><table>
-      <thead><tr><th style="width:36px"></th><th>訂單編號</th><th>時間</th><th>IG</th><th>姓名</th><th>電話</th><th>Email</th><th>超商</th><th>門市</th><th>付款方式</th><th>商品名稱</th><th>顏色</th><th>度數</th><th>數量</th><th>單價</th><th>小計</th><th>運費</th><th>折扣</th><th>總金額</th><th>付款</th><th>出貨</th><th>出貨日期</th><th>查帳備註</th><th>出貨備註</th><th>訂單備註</th></tr></thead>
+      <thead><tr><th style="width:36px"></th><th>訂單編號</th><th>時間</th><th>IG</th><th>姓名</th><th>電話</th><th>Email</th><th>超商</th><th>門市</th><th>付款方式</th><th>商品名稱</th><th>顏色</th><th>度數</th><th>數量</th><th>單價</th><th>小計</th><th>運費</th><th>折扣</th><th>優惠碼</th><th>總金額</th><th>付款</th><th>出貨</th><th>出貨日期</th><th>查帳備註</th><th>出貨備註</th><th>訂單備註</th></tr></thead>
       <tbody id="order-tbody"></tbody>
     </table></div>
   </div>
@@ -549,6 +569,32 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:poin
       <p style="font-size:12px;color:var(--gray-text);margin-bottom:12px">可新增、啟用/停用各種付款方式，前台依此顯示。</p>
       <div id="pay-method-list"></div>
       <button class="btn btn-sm btn-primary" style="margin-top:12px" onclick="openPayModal()">＋ 新增付款方式</button>
+    </div>
+  </div>
+
+  <!-- Coupon tab -->
+  <div id="tc-coupon" class="hidden">
+    <div class="toolbar">
+      <span style="font-size:14px;font-weight:600;color:var(--text)">🎟 優惠碼管理</span>
+      <div class="toolbar-right">
+        <button class="btn btn-sm btn-primary" onclick="openCouponModal()">＋ 新增優惠碼</button>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--gray-text);margin-bottom:10px" id="coupon-stats"></div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr>
+          <th>優惠碼</th>
+          <th>類型</th>
+          <th>折扣</th>
+          <th>最低消費</th>
+          <th>使用次數</th>
+          <th>到期日</th>
+          <th>狀態</th>
+          <th>操作</th>
+        </tr></thead>
+        <tbody id="coupon-tbody"></tbody>
+      </table>
     </div>
   </div>
 
@@ -747,6 +793,55 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:poin
   </div>
 </div>
 
+<!-- ═══ MODAL: 優惠碼 ═══ -->
+<div class="overlay" id="modal-coupon">
+  <div class="modal" style="max-width:460px">
+    <h3 id="modal-coupon-title">新增優惠碼</h3>
+    <input type="hidden" id="coupon-edit-id">
+    <div class="form-grid">
+      <div class="field span2">
+        <label>優惠碼 * <span style="font-size:11px;color:var(--gray-text)">（自動轉大寫）</span></label>
+        <input type="text" id="cpn-code" placeholder="例：SUMMER2025" oninput="this.value=this.value.toUpperCase()"
+          style="font-family:monospace;letter-spacing:.1em;font-size:15px">
+      </div>
+      <div class="field">
+        <label>折扣類型 *</label>
+        <select id="cpn-type" onchange="toggleCouponFields()">
+          <option value="fixed">固定金額（NT$）</option>
+          <option value="percent">百分比（%）</option>
+        </select>
+      </div>
+      <div class="field">
+        <label id="cpn-val-label">折扣金額（NT$）*</label>
+        <input type="number" id="cpn-value" min="1" placeholder="例：100">
+      </div>
+      <div class="field">
+        <label>最低消費（NT$，可不填）</label>
+        <input type="number" id="cpn-min" min="0" placeholder="例：500">
+      </div>
+      <div class="field">
+        <label>使用次數上限（可不填，空白=無限）</label>
+        <input type="number" id="cpn-limit" min="1" placeholder="例：100">
+      </div>
+      <div class="field span2">
+        <label>到期日（可不填，空白=永不到期）</label>
+        <input type="date" id="cpn-expire">
+      </div>
+      <div class="field span2">
+        <label>狀態</label>
+        <select id="cpn-active">
+          <option value="1">啟用</option>
+          <option value="0">停用</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-coupon')">取消</button>
+      <button class="btn btn-primary" onclick="saveCoupon()">儲存優惠碼</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ MODAL: 付款方式 ═══ -->
 <div class="overlay" id="modal-pay">
   <div class="modal">
@@ -810,7 +905,8 @@ const storage = getStorage(app);
 let products   = [];
 let orders     = [];
 let payMethods = [];
-let discounts  = [];   // array of discount rules
+let discounts  = [];
+let coupons    = [];   // 優惠碼列表
 let settings   = {
   title:'Zdayyyy 🌙 隱眼開團', desc:'精選日拋、月拋、彩片，團購優惠價',
   deadline:'', announce:'', closedText:'本次開團已結束，感謝您的支持！', open:'1',
@@ -853,7 +949,128 @@ function loadCart(){
 function clearCart(){
   cart={};
   try{ localStorage.removeItem('zdayyyy_cart'); }catch(e){}
+  // 購物車清空時自動清除優惠碼
+  clearCoupon(false);
 }
+
+// ══════════════════════════════════════════════════
+// ── 優惠碼功能（純新增，不修改原本流程）──────────
+// ══════════════════════════════════════════════════
+let appliedCoupon=null;   // { _docId, code, type, value, minOrder, usedLimit, expireDate, used }
+let couponDiscount=0;     // 最終優惠碼折扣金額
+
+function clearCoupon(showMsg=true){
+  appliedCoupon=null;
+  couponDiscount=0;
+  const inp=$('coupon-code-input'); if(inp) inp.value='';
+  const msg=$('coupon-msg'); if(msg) msg.textContent='';
+  const row=$('coupon-disc-row'); if(row) row.classList.add('hidden');
+  if(showMsg){
+    const m=$('coupon-msg');
+    if(m){ m.style.color='var(--ft-sub)'; m.textContent='優惠碼已取消'; }
+    setTimeout(()=>{ const m2=$('coupon-msg'); if(m2) m2.textContent=''; },2000);
+  }
+}
+
+async function applyCoupon(){
+  const code=($('coupon-code-input')?.value||'').trim().toUpperCase();
+  const msg=$('coupon-msg');
+  if(!msg) return;
+
+  if(!code){ msg.style.color='var(--red)'; msg.textContent='請輸入優惠碼'; return; }
+
+  // 購物車需有商品
+  const cartItems=Object.values(cart);
+  if(!cartItems.length){ msg.style.color='var(--red)'; msg.textContent='請先加入商品再套用優惠碼'; return; }
+
+  msg.style.color='var(--ft-sub)'; msg.textContent='驗證中…';
+
+  try{
+    // 從 Firestore couponCodes 查詢
+    const snap=await getDocs(collection(db,'couponCodes'));
+    let found=null;
+    snap.forEach(d=>{ if((d.data().code||'').toUpperCase()===code) found={...d.data(),_docId:d.id}; });
+
+    if(!found){
+      msg.style.color='var(--red)'; msg.textContent='❌ 優惠碼不存在';
+      appliedCoupon=null; couponDiscount=0; renderCart(); return;
+    }
+    // 是否啟用
+    if(!found.active){
+      msg.style.color='var(--red)'; msg.textContent='❌ 此優惠碼已停用';
+      appliedCoupon=null; couponDiscount=0; renderCart(); return;
+    }
+    // 是否過期
+    if(found.expireDate){
+      const today=new Date().toISOString().slice(0,10);
+      if(today>found.expireDate){
+        msg.style.color='var(--red)'; msg.textContent='❌ 此優惠碼已過期';
+        appliedCoupon=null; couponDiscount=0; renderCart(); return;
+      }
+    }
+    // 是否超過使用次數
+    if(found.usedLimit&&found.usedLimit>0){
+      if((found.used||0)>=(found.usedLimit)){
+        msg.style.color='var(--red)'; msg.textContent='❌ 此優惠碼已達使用上限';
+        appliedCoupon=null; couponDiscount=0; renderCart(); return;
+      }
+    }
+    // 最低消費
+    const sub=cartItems.reduce((s,i)=>s+Number(i.price)*Number(i.qty),0);
+    if(found.minOrder&&found.minOrder>0&&sub<found.minOrder){
+      msg.style.color='var(--red)';
+      msg.textContent=`❌ 需消費滿 NT$${Number(found.minOrder).toLocaleString()} 才可使用此優惠碼`;
+      appliedCoupon=null; couponDiscount=0; renderCart(); return;
+    }
+
+    // ✅ 驗證通過 — 計算折扣（在 finalTotal 最後扣，不動原本流程）
+    let disc=0;
+    if(found.type==='fixed'){
+      disc=Number(found.value)||0;
+    } else if(found.type==='percent'){
+      disc=Math.round(sub*(Number(found.value)||0)/100);
+    }
+    // 安全限制：不得大於小計
+    disc=Math.min(disc, sub);
+    disc=Math.max(0, disc);
+
+    appliedCoupon=found;
+    couponDiscount=disc;
+
+    msg.style.color='var(--teal-dark)';
+    msg.textContent=`✅ 優惠碼「${code}」已套用，折抵 NT$${disc.toLocaleString()}`;
+    renderCart();
+
+  }catch(e){
+    msg.style.color='var(--red)';
+    msg.textContent='驗證失敗：'+e.message;
+  }
+}
+
+// 購物車變動時重新驗證優惠碼
+async function revalidateCoupon(){
+  if(!appliedCoupon) return;
+  const cartItems=Object.values(cart);
+  if(!cartItems.length){ clearCoupon(false); return; }
+
+  const sub=cartItems.reduce((s,i)=>s+Number(i.price)*Number(i.qty),0);
+  // 重新計算折扣
+  let disc=0;
+  if(appliedCoupon.type==='fixed')    disc=Number(appliedCoupon.value)||0;
+  else if(appliedCoupon.type==='percent') disc=Math.round(sub*(Number(appliedCoupon.value)||0)/100);
+  disc=Math.min(disc,sub); disc=Math.max(0,disc);
+
+  // 最低消費重新檢查
+  if(appliedCoupon.minOrder&&appliedCoupon.minOrder>0&&sub<appliedCoupon.minOrder){
+    const msg=$('coupon-msg');
+    if(msg){ msg.style.color='var(--red)'; msg.textContent='⚠️ 購物車金額不足，優惠碼已自動取消'; }
+    appliedCoupon=null; couponDiscount=0;
+    const row=$('coupon-disc-row'); if(row) row.classList.add('hidden');
+    return;
+  }
+  couponDiscount=disc;
+}
+// ══════════════════════════════════════════════════
 let storeSearch = '';
 let storeStep = 'products';
 let selectedProductIds = new Set();
@@ -961,9 +1178,13 @@ async function loadPublicData(){
 async function loadAdminData(){
   loading(true);
   try{
-    const os=await getDocs(collection(db,'orders'));
+    const [os, cs]=await Promise.all([
+      getDocs(collection(db,'orders')),
+      getDocs(collection(db,'couponCodes')),
+    ]);
     orders=[]; os.forEach(d=>orders.push({...d.data(),_docId:d.id}));
-  }catch(e){ alert('⚠️ 訂單載入失敗：'+e.message); }
+    coupons=[]; cs.forEach(d=>coupons.push({...d.data(),_docId:d.id}));
+  }catch(e){ alert('⚠️ 資料載入失敗：'+e.message); }
   loading(false);
 }
 
@@ -1839,12 +2060,35 @@ function renderCart(){
   const ship=calcShip(sub);
   const cartItemsArr=Object.values(cart);
   const {totalDiscAmt, applied, hints}=calcDiscount(cartItemsArr);
-  const total=sub+ship-totalDiscAmt;
+
+  // 原本 total（不含優惠碼）
+  const baseTotal=sub+ship-totalDiscAmt;
+
+  // 重新驗證優惠碼（非同步，不 await，讓渲染先跑）
+  revalidateCoupon().then(()=>{
+    // finalTotal = 原本 total - 優惠碼折扣（最後一步）
+    const finalTotal=Math.max(0, baseTotal-couponDiscount);
+    $('cart-grand').textContent='NT$'+finalTotal.toLocaleString();
+    // 優惠碼折扣列
+    const row=$('coupon-disc-row');
+    const amt=$('coupon-disc-amt');
+    if(row&&amt){
+      if(couponDiscount>0&&appliedCoupon){
+        amt.textContent=`-NT$${couponDiscount.toLocaleString()}`;
+        row.classList.remove('hidden');
+      } else {
+        row.classList.add('hidden');
+      }
+    }
+  });
+
+  // 先用 baseTotal 顯示（等 revalidate 非同步後更新）
+  const finalTotal=Math.max(0, baseTotal-couponDiscount);
 
   sum.classList.remove('hidden');
   $('cart-subtotal').textContent='NT$'+sub.toLocaleString();
   $('cart-ship').textContent=ship===0?'免運':'NT$'+ship.toLocaleString();
-  $('cart-grand').textContent='NT$'+Math.max(0,total).toLocaleString();
+  $('cart-grand').textContent='NT$'+finalTotal.toLocaleString();
   $('btn-go-checkout')?.removeAttribute('disabled');
 
   // 免運提示
@@ -1953,7 +2197,12 @@ async function submitOrder(){
   const {totalDiscAmt, applied}=calcDiscount(cartItems);
   const discAmt=totalDiscAmt;
   const discLabel=applied.map(a=>a.name).join('、')||'';
-  const total=Math.max(0,sub+ship-discAmt);
+  // 原本 total
+  const baseTotal=Math.max(0,sub+ship-discAmt);
+  // 優惠碼在最後一步扣（不動原本 discount 流程）
+  const orderCouponCode=appliedCoupon?.code||'';
+  const orderCouponDiscount=couponDiscount||0;
+  const total=Math.max(0,baseTotal-orderCouponDiscount);
   if(total<0) return alert('訂單金額計算異常，請聯繫客服');
 
   // ── 鎖定送單，禁用按鈕 ───────────────────────
@@ -1979,6 +2228,8 @@ async function submitOrder(){
       qty:Number(i.qty), price:Number(i.price), subtotal:Number(i.price)*Number(i.qty)
     })),
     subtotal:sub, ship, discAmt, discLabel, total,
+    couponCode: orderCouponCode,
+    couponDiscount: orderCouponDiscount,
     paid:false, shipped:false, shippedDate:'', noteAccount:'', noteShip:'',
     extraFields: Object.fromEntries(
       fields.filter(f=>!['name','phone','ig','email','storeName','storeNo','note'].includes(f.key))
@@ -1990,6 +2241,12 @@ async function submitOrder(){
   try{
     const ref=await addDoc(collection(db,'orders'),order);
     orders.push({...order,_docId:ref.id});
+    // 優惠碼 used+1
+    if(appliedCoupon?._docId&&orderCouponDiscount>0){
+      try{
+        await updateDoc(doc(db,'couponCodes',appliedCoupon._docId),{used:(appliedCoupon.used||0)+1});
+      }catch(e){ console.warn('優惠碼 used 更新失敗',e); }
+    }
     $('order-form-panel').style.display='none';
     $('cart-panel').style.display='none';
     $('store-products').style.display='none';
@@ -1999,7 +2256,7 @@ async function submitOrder(){
     $('success-order-no').textContent='訂單編號：'+orderNo;
     $('success-msg').textContent=settings.successMsg||'感謝您的訂購！';
     cart={}; clearCart(); updateCartCount();
-    // 成功後不恢復按鈕（已跳成功頁，不需要再送）
+    // clearCart 已呼叫 clearCoupon，不需重複清
   }catch(e){
     // 失敗：解除鎖定，恢復按鈕
     isSubmitting=false;
@@ -2038,13 +2295,14 @@ async function doLogin(){
 async function logout(){ await signOut(auth); }
 
 function switchTab(tab){
-  ['products','orders','discount','payment','settings'].forEach(t=>{
+  ['products','orders','discount','coupon','payment','settings'].forEach(t=>{
     $('tc-'+t).classList.toggle('hidden',t!==tab);
     $('tab-'+t).classList.toggle('active',t===tab);
   });
   if(tab==='products'){ populateProductFilters(); renderProductTable(); }
   if(tab==='orders')   renderOrderTable();
   if(tab==='discount') renderDiscountAdmin();
+  if(tab==='coupon')   renderCouponTable();
   if(tab==='payment')  renderPayMethodList();
   if(tab==='settings'){ loadSettingsForm(); }
   refreshStats();
@@ -2383,6 +2641,7 @@ function renderOrderTable(){
         ${idx===0?`<td rowspan="${o.items.length}">NT$${(o.subtotal||0).toLocaleString()}</td>
         <td rowspan="${o.items.length}">${o.ship===0?'免運':'NT$'+(o.ship||0).toLocaleString()}</td>
         <td rowspan="${o.items.length}">${o.discAmt?'-NT$'+o.discAmt.toLocaleString():'-'}</td>
+        <td rowspan="${o.items.length}">${o.couponCode?`<span style="font-size:11px;background:var(--teal-light);color:var(--teal-dark);border-radius:6px;padding:2px 6px">${o.couponCode}</span><br><span style="font-size:11px;color:var(--red)">-NT$${(o.couponDiscount||0).toLocaleString()}</span>`:'-'}</td>
         <td rowspan="${o.items.length}" style="font-weight:600;color:var(--teal)">NT$${o.total.toLocaleString()}</td>
         <td rowspan="${o.items.length}">
           ${paidBadge}<br>
@@ -2767,7 +3026,159 @@ async function saveDiscounts(){
   loading(false);
 }
 
-// ── Pay methods admin ─────────────────────────────
+// ── 優惠碼管理 ────────────────────────────────────
+function _couponExpired(c){
+  if(!c.expireAt) return false;
+  return new Date(c.expireAt) < new Date(new Date().toDateString());
+}
+function _couponExhausted(c){
+  return c.limit>0 && c.used>=c.limit;
+}
+function _couponStatus(c){
+  if(!c.active) return {text:'停用',cls:'badge-off'};
+  if(_couponExpired(c)) return {text:'已過期',cls:'badge-off',warn:true};
+  if(_couponExhausted(c)) return {text:'已用完',cls:'badge-off',warn:true};
+  return {text:'啟用中',cls:'badge-on'};
+}
+
+function renderCouponTable(){
+  const tbody=$('coupon-tbody'); if(!tbody) return;
+  // 最新建立的在最上面（依 _docId 字母序倒排作為近似時間序）
+  const list=[...coupons].reverse();
+
+  const statsEl=$('coupon-stats');
+  if(statsEl){
+    const active=coupons.filter(c=>c.active&&!_couponExpired(c)&&!_couponExhausted(c)).length;
+    statsEl.textContent=`共 ${coupons.length} 組優惠碼，啟用中 ${active} 組`;
+  }
+
+  if(!list.length){
+    tbody.innerHTML=`<tr><td colspan="8" style="text-align:center;color:#aaa;padding:2rem">尚無優惠碼</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML=list.map(c=>{
+    const st=_couponStatus(c);
+    const expired=_couponExpired(c);
+    const exhausted=_couponExhausted(c);
+    const typeText=c.type==='percent'?`${c.value}% OFF`:`NT$${Number(c.value).toLocaleString()}`;
+    const minText=c.minAmount>0?`NT$${Number(c.minAmount).toLocaleString()}`:'無限制';
+    const usedText=c.limit>0?`${c.used||0} / ${c.limit}`:`${c.used||0} / ∞`;
+    const expireText=c.expireAt||'永不到期';
+    const warnStyle=st.warn?'color:var(--red);font-weight:500':'';
+    return `<tr style="${expired||exhausted?'opacity:.7':''}">
+      <td><b style="font-family:monospace;letter-spacing:.06em;font-size:13px">${c.code}</b></td>
+      <td>${c.type==='percent'?'百分比':'固定金額'}</td>
+      <td style="color:var(--teal-dark);font-weight:600">${typeText}</td>
+      <td>${minText}</td>
+      <td style="${exhausted?'color:var(--red);font-weight:600':''}">${usedText}</td>
+      <td style="${expired?'color:var(--red)':''}">${expireText}</td>
+      <td>
+        <span class="badge ${st.cls}" style="${warnStyle}">${st.text}</span>
+        <button class="btn btn-sm" style="margin-left:4px;font-size:11px" onclick="toggleCouponActive('${c._docId}',${!c.active})">${c.active?'停用':'啟用'}</button>
+      </td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-sm" onclick="openCouponModal('${c._docId}')" style="margin-right:3px">編輯</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteCoupon('${c._docId}')">刪除</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function openCouponModal(docId=null){
+  $('coupon-edit-id').value=docId||'';
+  $('modal-coupon-title').textContent=docId?'編輯優惠碼':'新增優惠碼';
+  if(docId){
+    const c=coupons.find(x=>x._docId===docId); if(!c) return;
+    $('cpn-code').value=c.code||'';
+    $('cpn-type').value=c.type||'fixed';
+    $('cpn-value').value=c.value||'';
+    $('cpn-min').value=c.minAmount||'';
+    $('cpn-limit').value=c.limit||'';
+    $('cpn-expire').value=c.expireAt||'';
+    $('cpn-active').value=c.active?'1':'0';
+  } else {
+    ['cpn-code','cpn-value','cpn-min','cpn-limit','cpn-expire'].forEach(f=>{ const el=$(f); if(el) el.value=''; });
+    $('cpn-type').value='fixed';
+    $('cpn-active').value='1';
+  }
+  toggleCouponFields();
+  $('modal-coupon').classList.add('open');
+}
+
+function toggleCouponFields(){
+  const t=$('cpn-type')?.value;
+  const lbl=$('cpn-val-label');
+  if(lbl) lbl.textContent=t==='percent'?'折扣百分比（%）*':'折扣金額（NT$）*';
+}
+
+async function saveCoupon(){
+  const code=($('cpn-code').value||'').trim().toUpperCase();
+  const type=$('cpn-type').value;
+  const value=parseFloat($('cpn-value').value);
+  if(!code) return alert('請輸入優惠碼');
+  if(!value||value<=0) return alert('請輸入有效的折扣數值');
+  if(type==='percent'&&(value<=0||value>=100)) return alert('百分比需介於 1～99');
+
+  const docId=$('coupon-edit-id').value;
+  // 檢查重複碼（新增時）
+  if(!docId){
+    const dup=coupons.find(c=>c.code===code);
+    if(dup) return alert(`優惠碼「${code}」已存在`);
+  }
+
+  const obj={
+    code,
+    type,
+    value,
+    minAmount: parseFloat($('cpn-min').value)||0,
+    limit:     parseInt($('cpn-limit').value)||0,
+    used:      docId?(coupons.find(c=>c._docId===docId)?.used||0):0,
+    expireAt:  $('cpn-expire').value||'',
+    active:    $('cpn-active').value==='1',
+  };
+
+  loading(true);
+  try{
+    if(docId){
+      await updateDoc(doc(db,'couponCodes',docId),obj);
+      const i=coupons.findIndex(c=>c._docId===docId);
+      coupons[i]={...coupons[i],...obj};
+    } else {
+      const r=await addDoc(collection(db,'couponCodes'),obj);
+      coupons.push({...obj,_docId:r.id});
+    }
+    renderCouponTable();
+    closeModal('modal-coupon');
+  }catch(e){ alert('❌ 儲存失敗：'+e.message); }
+  loading(false);
+}
+
+async function toggleCouponActive(docId, active){
+  loading(true);
+  try{
+    await updateDoc(doc(db,'couponCodes',docId),{active});
+    const c=coupons.find(x=>x._docId===docId);
+    if(c) c.active=active;
+    renderCouponTable();
+  }catch(e){ alert('❌ '+e.message); }
+  loading(false);
+}
+
+async function deleteCoupon(docId){
+  const c=coupons.find(x=>x._docId===docId);
+  if(!c) return;
+  if(!confirm(`確定刪除優惠碼「${c.code}」？\n已使用次數：${c.used||0} 次`)) return;
+  loading(true);
+  try{
+    await deleteDoc(doc(db,'couponCodes',docId));
+    coupons=coupons.filter(x=>x._docId!==docId);
+    renderCouponTable();
+  }catch(e){ alert('❌ '+e.message); }
+  loading(false);
+}
+
+// ── 付款方式管理 ──────────────────────────────────
 function renderPayMethodList(){
   const el=$('pay-method-list');
   if(!payMethods.length){ el.innerHTML='<p style="color:#aaa;font-size:13px">尚無付款方式</p>'; return; }
@@ -2855,13 +3266,14 @@ Object.assign(window,{
   openProductModal,editProduct,saveProduct,toggleActive,deleteProduct,
   addImgUrlField,syncImgUrls,removeImg,handleImgFiles,
   renderProductTable,populateProductFilters,clearProductFilters,
+  applyCoupon,clearCoupon,
   toggleProductSel,toggleProductSelAll,clearProductSel,batchProductActive,
   renderOrderTable,exportExcel,clearDateFilter,
   toggleOrderSel,toggleOrderSelAll,clearOrderSel,batchOrderStatus,batchDeleteOrders,
   toggleOrderField,updateOrderNote,
   renderDiscountAdmin,addDiscRule,removeDiscRule,discField,saveDiscounts,discToggleCat,
   openPayModal,editPayMethod,savePayMethod,deletePayMethod,togglePayFields,
-  saveSettings,addFieldRow,removeField,removeFieldConfirm,updateField,fieldDragStart,fieldDragOver,fieldDrop,fieldDragEnd,
+  renderCouponTable,openCouponModal,saveCoupon,toggleCouponActive,deleteCoupon,toggleCouponFields,removeField,removeFieldConfirm,updateField,fieldDragStart,fieldDragOver,fieldDrop,fieldDragEnd,
   addProductOpt,removeProductOpt,renameProductOpt,addPowerSet,removePowerSet,updatePowerSet,applyPowersPreset,
   closeModal
 });
