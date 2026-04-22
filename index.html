@@ -359,7 +359,8 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:poin
         <div class="summary-row"><span id="ship-label">超商運費</span><span id="cart-ship">NT$0</span></div>
         <div class="free-ship-hint hidden" id="free-ship-hint"></div>
         <div class="disc-hint hidden" id="disc-hint"></div>
-        <div class="summary-row disc-row hidden" id="disc-row"><span id="disc-row-label">折扣</span><span id="disc-row-amt"></span></div>
+        <!-- 多優惠列表 -->
+        <div id="disc-rows-container"></div>
         <div class="summary-row total-row"><span>總金額</span><span class="amt" id="cart-grand">NT$0</span></div>
         <div class="step-actions">
           <button class="btn-ft-primary" id="btn-go-checkout" onclick="goCheckoutStep()">下一步：填寫訂購資料</button>
@@ -1477,42 +1478,96 @@ async function saveSettings(){
   loading(false);
 }
 
+// ── 多優惠並用計算 ────────────────────────────────
+// 回傳 { totalDiscAmt, applied:[{name, discAmt}], hints:[string] }
 function calcDiscount(cartItems){
-  // returns { discAmt, label } for best matching rule
-  let best = {discAmt:0, label:''};
-  for(const rule of discounts){
-    if(!rule.active) continue;
-    // filter items matching rule scope
-    let matched = cartItems;
-    if(rule.scope==='cat' && rule.cats?.length){
-      matched = cartItems.filter(i=>rule.cats.includes(i.cat));
-    } else if(rule.scope==='product' && rule.productIds?.length){
-      matched = cartItems.filter(i=>rule.productIds.includes(i.docId));
-    }
-    const totalQty = matched.reduce((s,i)=>s+i.qty,0);
-    const totalAmt = matched.reduce((s,i)=>s+i.price*i.qty,0);
-    if(totalQty < (rule.minQty||1)) continue;
+  // 記錄每個 cartKey 已被哪個優惠使用的數量（防止同商品被重複折扣）
+  // usedQty[cartKey] = 已被使用的 qty
+  const usedQty={};
+  cartItems.forEach(i=>{ usedQty[i.docId+'|'+(i.color||'')+'|'+(i.powerDisplay||'')]=0; });
 
+  const applied=[];   // [{name, discAmt}]
+  const hints=[];     // 快要達標的提示
+
+  // 依優先順序遍歷所有啟用的規則
+  const activeRules=discounts.filter(r=>r.active);
+
+  for(const rule of activeRules){
+    // 1. 找出此規則適用的商品
+    let candidates=cartItems;
+    if(rule.scope==='cat'&&rule.cats?.length){
+      candidates=cartItems.filter(i=>rule.cats.includes(i.cat));
+    } else if(rule.scope==='product'&&rule.productIds?.length){
+      candidates=cartItems.filter(i=>rule.productIds.includes(i.docId));
+    }
+    if(!candidates.length) continue;
+
+    // 2. 計算每件商品「剩餘可用數量」（扣掉已被其他優惠使用的）
+    const avail=candidates.map(i=>{
+      const key=i.docId+'|'+(i.color||'')+'|'+(i.powerDisplay||'');
+      const remaining=i.qty-(usedQty[key]||0);
+      return {...i, _avail:Math.max(0,remaining)};
+    }).filter(i=>i._avail>0);
+
+    const totalQty=avail.reduce((s,i)=>s+i._avail,0);
+    const totalAmt=avail.reduce((s,i)=>s+i.price*i._avail,0);
+    const minQty=rule.minQty||1;
+
+    if(totalQty<minQty){
+      // 未達門檻 → 加入提示
+      const need=minQty-totalQty;
+      if(need>0&&need<=3){
+        if(rule.discType==='bundle')
+          hints.push(`🏷 再加 ${need} 副可享「${rule.name||'組合優惠'}」`);
+        else
+          hints.push(`🏷 再加 ${need} 副可享「${rule.name||'優惠'}」`);
+      }
+      continue;
+    }
+
+    // 3. 計算折扣金額
     let discAmt=0;
+    let usedItems=[];  // 記錄此規則實際使用了哪些商品及數量
+
     if(rule.discType==='pct'){
       discAmt=Math.round(totalAmt*(1-rule.discVal/100));
+      usedItems=avail.map(i=>({...i, _used:i._avail}));
     } else if(rule.discType==='fixed'){
       discAmt=Math.min(rule.discVal||0, totalAmt);
+      usedItems=avail.map(i=>({...i, _used:i._avail}));
     } else if(rule.discType==='bundle'){
-      // 固定組合價：minQty副 = bundlePrice元，超過部分恢復原價
-      const bundleQty = rule.minQty||1;
-      const bundlePrice = rule.bundlePrice||0;
-      const bundleTimes = Math.floor(totalQty / bundleQty); // 可套用幾組
-      // 按單價排序，取最便宜的 bundleQty*bundleTimes 副套組合價
-      const allUnits = matched.flatMap(i=>Array(i.qty).fill(i.price)).sort((a,b)=>a-b);
-      const bundleUnitCount = bundleTimes * bundleQty;
-      const normalPriceForBundle = allUnits.slice(0, bundleUnitCount).reduce((s,v)=>s+v,0);
-      const actualBundlePrice = bundleTimes * bundlePrice;
-      discAmt = Math.max(0, normalPriceForBundle - actualBundlePrice);
+      const bundleQty=minQty;
+      const bundlePrice=rule.bundlePrice||0;
+      const bundleTimes=Math.floor(totalQty/bundleQty);
+      if(bundleTimes<1) continue;
+      // 按單價排序，取最便宜的商品湊組合
+      const units=avail.flatMap(i=>Array(i._avail).fill({price:i.price, key:i.docId+'|'+(i.color||'')+'|'+(i.powerDisplay||'')}))
+        .sort((a,b)=>a.price-b.price);
+      const bundleUnitCount=bundleTimes*bundleQty;
+      const normalPrice=units.slice(0,bundleUnitCount).reduce((s,u)=>s+u.price,0);
+      discAmt=Math.max(0,normalPrice-bundleTimes*bundlePrice);
+      // 記錄使用的數量（按 key 統計）
+      const usedCount={};
+      units.slice(0,bundleUnitCount).forEach(u=>{ usedCount[u.key]=(usedCount[u.key]||0)+1; });
+      usedItems=avail.map(i=>{
+        const key=i.docId+'|'+(i.color||'')+'|'+(i.powerDisplay||'');
+        return {...i, _used:usedCount[key]||0};
+      });
     }
-    if(discAmt > best.discAmt) best={discAmt, label:rule.name||'優惠折扣'};
+
+    if(discAmt<=0) continue;
+
+    // 4. 標記已使用的數量（防止下個規則重複使用同商品）
+    usedItems.forEach(i=>{
+      const key=i.docId+'|'+(i.color||'')+'|'+(i.powerDisplay||'');
+      usedQty[key]=(usedQty[key]||0)+(i._used||i._avail);
+    });
+
+    applied.push({name:rule.name||'優惠折扣', discAmt});
   }
-  return best;
+
+  const totalDiscAmt=applied.reduce((s,a)=>s+a.discAmt,0);
+  return {totalDiscAmt, applied, hints};
 }
 
 // ── Store rendering ───────────────────────────────
@@ -1762,7 +1817,12 @@ function renderCart(){
   updateCartCount();
   const items=Object.entries(cart);
   const el=$('cart-body'), sum=$('cart-summary');
-  if(!items.length){ el.innerHTML='<div class="cart-empty">尚未選購任何商品</div>'; sum.classList.add('hidden'); $('btn-go-checkout')?.setAttribute('disabled','disabled'); return; }
+  if(!items.length){
+    el.innerHTML='<div class="cart-empty">尚未選購任何商品</div>';
+    sum.classList.add('hidden');
+    $('btn-go-checkout')?.setAttribute('disabled','disabled');
+    return;
+  }
   let sub=0;
   el.innerHTML=items.map(([id,i])=>{
     const s=i.price*i.qty; sub+=s;
@@ -1778,8 +1838,8 @@ function renderCart(){
 
   const ship=calcShip(sub);
   const cartItemsArr=Object.values(cart);
-  const {discAmt,label}=calcDiscount(cartItemsArr);
-  const total=sub+ship-discAmt;
+  const {totalDiscAmt, applied, hints}=calcDiscount(cartItemsArr);
+  const total=sub+ship-totalDiscAmt;
 
   sum.classList.remove('hidden');
   $('cart-subtotal').textContent='NT$'+sub.toLocaleString();
@@ -1787,42 +1847,37 @@ function renderCart(){
   $('cart-grand').textContent='NT$'+Math.max(0,total).toLocaleString();
   $('btn-go-checkout')?.removeAttribute('disabled');
 
-  // free ship hint
+  // 免運提示
   const hint=$('free-ship-hint'), thresh=Number(settings.freeShip)||0;
-  (thresh>0&&sub<thresh&&settings.freeShipText)?(hint.textContent=settings.freeShipText,hint.classList.remove('hidden')):hint.classList.add('hidden');
+  (thresh>0&&sub<thresh&&settings.freeShipText)
+    ?(hint.textContent=settings.freeShipText,hint.classList.remove('hidden'))
+    :hint.classList.add('hidden');
 
-  // discount row
-  const dr=$('disc-row'), dh=$('disc-hint');
-  if(discAmt>0){
-    $('disc-row-label').textContent=label;
-    $('disc-row-amt').textContent='-NT$'+discAmt.toLocaleString();
-    dr.classList.remove('hidden');
-    // check if close to next tier - simple hint
-    dh.textContent='🎉 已套用優惠：'+label;
-    dh.classList.remove('hidden');
-  } else {
-    dr.classList.add('hidden');
-    dh.classList.add('hidden');
-    // show discount hint if any rule matches partially
-    const hint2=_discHint(cartItemsArr);
-    if(hint2){ dh.textContent=hint2; dh.classList.remove('hidden'); }
-  }
-}
-
-function _discHint(cartItems){
-  for(const rule of discounts){
-    if(!rule.active) continue;
-    let matched=cartItems;
-    if(rule.scope==='cat'&&rule.cats?.length) matched=cartItems.filter(i=>rule.cats.includes(i.cat));
-    else if(rule.scope==='product'&&rule.productIds?.length) matched=cartItems.filter(i=>rule.productIds.includes(i.docId));
-    const qty=matched.reduce((s,i)=>s+i.qty,0);
-    const need=(rule.minQty||1)-qty;
-    if(need>0){
-      if(rule.discType==='bundle') return `🏷 再加 ${need} 副可享「${rule.name||'組合優惠'}」`;
-      return `🏷 再加 ${need} 副可享「${rule.name||'優惠'}」`;
+  // 多優惠列表
+  const discContainer=$('disc-rows-container');
+  const dh=$('disc-hint');
+  if(discContainer){
+    if(applied.length>0){
+      discContainer.innerHTML=applied.map(a=>`
+        <div class="summary-row disc-row" style="display:flex">
+          <span style="color:var(--red);font-size:12px">🎉 ${a.name}</span>
+          <span style="color:var(--red);font-weight:600">-NT$${a.discAmt.toLocaleString()}</span>
+        </div>`).join('');
+      dh.textContent=applied.length>1
+        ?`🎉 已套用 ${applied.length} 項優惠，共折 NT$${totalDiscAmt.toLocaleString()}`
+        :`🎉 已套用優惠：${applied[0].name}`;
+      dh.classList.remove('hidden');
+    } else {
+      discContainer.innerHTML='';
+      // 顯示快達標提示（取第一個）
+      if(hints.length>0){
+        dh.textContent=hints[0];
+        dh.classList.remove('hidden');
+      } else {
+        dh.classList.add('hidden');
+      }
     }
   }
-  return '';
 }
 
 // ── Payment ───────────────────────────────────────
@@ -1895,7 +1950,9 @@ async function submitOrder(){
   const sub=cartItems.reduce((s,i)=>s+Number(i.price)*Number(i.qty),0);
   if(sub<=0) return alert('訂單金額異常，請重新選購商品');
   const ship=calcShip(sub);
-  const {discAmt,label:discLabel}=calcDiscount(cartItems);
+  const {totalDiscAmt, applied}=calcDiscount(cartItems);
+  const discAmt=totalDiscAmt;
+  const discLabel=applied.map(a=>a.name).join('、')||'';
   const total=Math.max(0,sub+ship-discAmt);
   if(total<0) return alert('訂單金額計算異常，請聯繫客服');
 
