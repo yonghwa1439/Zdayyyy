@@ -299,7 +299,33 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:poin
   #fields-cards{display:none}
 }
 
-/* ── Responsive ── */
+/* ── Order cards (admin) ── */
+.order-card{background:var(--white);border:1px solid var(--gray-border);border-radius:14px;margin-bottom:14px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.06);transition:box-shadow .2s}
+.order-card:hover{box-shadow:0 3px 12px rgba(0,0,0,.10)}
+.order-card-head{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:10px 14px;background:var(--gray-bg);border-bottom:1px solid var(--gray-border)}
+.order-card-no{font-size:12px;font-weight:700;color:var(--text);font-family:monospace;letter-spacing:.04em}
+.order-card-time{font-size:11px;color:var(--gray-text)}
+.order-card-badges{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto;align-items:center}
+.order-card-body{display:grid;grid-template-columns:1fr 1fr;gap:0;padding:0}
+@media(max-width:600px){.order-card-body{grid-template-columns:1fr}}
+.order-card-section{padding:10px 14px;border-right:1px solid var(--gray-border)}
+.order-card-section:last-child{border-right:none}
+.order-card-section h5{font-size:11px;font-weight:600;color:var(--gray-text);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid var(--gray-border)}
+.order-card-row{display:flex;justify-content:space-between;font-size:12px;padding:2px 0;color:var(--text)}
+.order-card-label{color:var(--gray-text);margin-right:6px}
+.order-card-items{padding:8px 14px;border-top:1px solid var(--gray-border);background:#fafafa}
+.order-card-item{display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px dashed var(--gray-border)}
+.order-card-item:last-child{border:none}
+.order-card-footer{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:8px 14px;border-top:1px solid var(--gray-border);background:var(--gray-bg)}
+.order-card-total{font-size:14px;font-weight:700;color:var(--teal);margin-right:auto}
+/* 狀態顏色強化 */
+.status-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:3px 10px;border-radius:20px;font-weight:600;letter-spacing:.03em}
+.status-paid{background:#d1fae5;color:#065f46;border:1px solid #6ee7b7}
+.status-unpaid{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5}
+.status-shipped{background:#dbeafe;color:#1e40af;border:1px solid #93c5fd}
+.status-unshipped{background:#ffedd5;color:#9a3412;border:1px solid #fdba74}
+/* checkbox for order cards */
+.order-card-check{width:16px;height:16px;accent-color:var(--teal);cursor:pointer;flex-shrink:0}
 @media(max-width:520px){
   .product-grid{grid-template-columns:repeat(2,1fr);gap:12px}
   .form-grid{grid-template-columns:1fr}
@@ -545,10 +571,9 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:poin
       </div>
       <div class="toolbar-right"><button class="btn btn-sm btn-primary" onclick="exportExcel()">📊 匯出 Excel</button></div>
     </div>
-    <div class="tbl-wrap"><table>
-      <thead><tr><th style="width:36px"></th><th>訂單編號</th><th>時間</th><th>IG</th><th>姓名</th><th>電話</th><th>Email</th><th>超商</th><th>門市</th><th>付款方式</th><th>商品名稱</th><th>顏色</th><th>度數</th><th>數量</th><th>單價</th><th>小計</th><th>運費</th><th>折扣</th><th>優惠碼</th><th>總金額</th><th>付款</th><th>出貨</th><th>出貨日期</th><th>查帳備註</th><th>出貨備註</th><th>訂單備註</th></tr></thead>
-      <tbody id="order-tbody"></tbody>
-    </table></div>
+    <div class="tbl-wrap" style="border:none;background:transparent;overflow:visible">
+      <div id="order-tbody"></div>
+    </div>
   </div>
 
   <!-- Discount tab -->
@@ -838,6 +863,47 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:poin
     <div class="modal-actions">
       <button class="btn" onclick="closeModal('modal-coupon')">取消</button>
       <button class="btn btn-primary" onclick="saveCoupon()">儲存優惠碼</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODAL: 訂單編輯 ═══ -->
+<div class="overlay" id="modal-order-edit">
+  <div class="modal" style="max-width:620px">
+    <h3 id="order-edit-title">編輯訂單</h3>
+    <input type="hidden" id="oe-docid">
+    <!-- 客戶資訊 -->
+    <div style="font-size:12px;font-weight:600;color:var(--gray-text);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px">客戶資訊</div>
+    <div class="form-grid">
+      <div class="field"><label>姓名 *</label><input type="text" id="oe-name"></div>
+      <div class="field"><label>電話 *</label><input type="tel" id="oe-phone"></div>
+      <div class="field"><label>IG 帳號</label><input type="text" id="oe-ig"></div>
+      <div class="field"><label>Email</label><input type="email" id="oe-email"></div>
+      <div class="field"><label>超商</label>
+        <select id="oe-cvs"><option value="7-11">7-ELEVEN</option><option value="全家">全家</option></select>
+      </div>
+      <div class="field"><label>門市名稱</label><input type="text" id="oe-store-name"></div>
+      <div class="field"><label>店號／地址</label><input type="text" id="oe-store-no"></div>
+      <div class="field"><label>付款方式</label><input type="text" id="oe-pay-method"></div>
+      <div class="field span2"><label>訂單備註</label><input type="text" id="oe-note"></div>
+    </div>
+    <!-- 商品明細 -->
+    <div style="font-size:12px;font-weight:600;color:var(--gray-text);letter-spacing:.06em;text-transform:uppercase;margin:14px 0 8px">商品明細</div>
+    <div id="oe-items-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px"></div>
+    <button type="button" class="btn btn-sm btn-primary" onclick="oeAddItem()">＋ 新增商品列</button>
+    <!-- 金額預覽（唯讀，自動計算） -->
+    <div style="margin-top:14px;background:var(--gray-bg);border-radius:10px;padding:12px;font-size:13px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="color:var(--gray-text)">小計</span><span id="oe-subtotal">NT$0</span></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span style="color:var(--gray-text)">運費</span><span id="oe-ship">NT$0</span></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px" id="oe-disc-row"><span style="color:var(--gray-text)">優惠折扣</span><span id="oe-disc">-NT$0</span></div>
+      <div style="display:flex;justify-content:space-between;font-weight:700;font-size:14px;border-top:1px solid var(--gray-border);padding-top:8px;margin-top:4px">
+        <span>總金額</span><span id="oe-total" style="color:var(--teal)">NT$0</span>
+      </div>
+      <div style="font-size:11px;color:var(--gray-text);margin-top:4px">⚠️ 金額依目前商品列自動計算，運費與優惠依後台設定重新計算</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal('modal-order-edit')">取消</button>
+      <button class="btn btn-primary" onclick="saveOrderEdit()">💾 儲存修改</button>
     </div>
   </div>
 </div>
@@ -2597,74 +2663,103 @@ function renderOrderTable(){
   const from=$('order-date-from')?.value||'';
   const to=$('order-date-to')?.value||'';
   const list=orders.filter(o=>{
-    // keyword filter
     const kw=!q||(o.name||'').includes(q)||(o.phone||'').includes(q)||
       (o.ig||'').includes(q)||(o.orderNo||'').includes(q);
-    // date filter — compare YYYY/MM/DD string (ISO-compatible when zero-padded)
     let dateOk=true;
     if(from||to){
-      // order.time format: YYYY/M/D HH:MM → normalise to YYYY-MM-DD for compare
-      const rawDate=(o.time||'').split(' ')[0]; // "2025/4/11"
+      const rawDate=(o.time||'').split(' ')[0];
       const parts=rawDate.split('/');
-      const oDate=parts.length===3
-        ?`${parts[0]}-${parts[1].padStart(2,'0')}-${parts[2].padStart(2,'0')}`
-        :'';
-      if(from && oDate && oDate<from) dateOk=false;
-      if(to   && oDate && oDate>to)   dateOk=false;
+      const oDate=parts.length===3?`${parts[0]}-${parts[1].padStart(2,'0')}-${parts[2].padStart(2,'0')}`:'';
+      if(from&&oDate&&oDate<from) dateOk=false;
+      if(to&&oDate&&oDate>to) dateOk=false;
     }
-    return kw && dateOk;
+    return kw&&dateOk;
   });
+
   const tb=$('order-tbody');
-  if(!list.length){ tb.innerHTML=`<tr><td colspan="26" style="text-align:center;color:#aaa;padding:2rem">尚無訂單</td></tr>`; return; }
-  const rows=[];
-  list.slice().reverse().forEach(o=>{
+  if(!list.length){
+    tb.innerHTML=`<div style="text-align:center;color:#aaa;padding:2rem">尚無訂單</div>`;
+    refreshStats(); return;
+  }
+
+  tb.innerHTML=list.slice().reverse().map(o=>{
     const chk=selectedOrderIds.has(o._docId);
-    const paidBadge=o.paid?'<span class="status-badge status-paid">已付款</span>':'<span class="status-badge status-unpaid">未付款</span>';
-    const shipBadge=o.shipped?'<span class="status-badge status-shipped">已出貨</span>':'<span class="status-badge status-unshipped">未出貨</span>';
-    (o.items||[]).forEach((item,idx)=>{
-      rows.push(`<tr>
-        ${idx===0?`<td rowspan="${o.items.length}"><input type="checkbox" ${chk?'checked':''} onchange="toggleOrderSel('${o._docId}',this.checked)"></td>
-        <td rowspan="${o.items.length}" style="font-size:11px;white-space:nowrap">${o.orderNo||'-'}</td>
-        <td rowspan="${o.items.length}" style="font-size:11px;white-space:nowrap">${o.time}</td>
-        <td rowspan="${o.items.length}">${o.ig||'-'}</td>
-        <td rowspan="${o.items.length}">${o.name}</td>
-        <td rowspan="${o.items.length}">${o.phone}</td>
-        <td rowspan="${o.items.length}" style="font-size:11px">${o.email||'-'}</td>
-        <td rowspan="${o.items.length}">${o.cvs||'-'}</td>
-        <td rowspan="${o.items.length}" style="white-space:nowrap">${o.storeName||'-'}${o.storeNo?' ('+o.storeNo+')':''}</td>
-        <td rowspan="${o.items.length}">${o.payMethod||'-'}</td>`:''}
-        <td>${item.name}</td>
-        <td>${item.color||'-'}</td>
-        <td>${item.powerDisplay||'-'}</td>
-        <td style="text-align:center">${item.qty}</td>
-        <td>NT$${(item.price||0).toLocaleString()}</td>
-        ${idx===0?`<td rowspan="${o.items.length}">NT$${(o.subtotal||0).toLocaleString()}</td>
-        <td rowspan="${o.items.length}">${o.ship===0?'免運':'NT$'+(o.ship||0).toLocaleString()}</td>
-        <td rowspan="${o.items.length}">${o.discAmt?'-NT$'+o.discAmt.toLocaleString():'-'}</td>
-        <td rowspan="${o.items.length}">${o.couponCode?`<span style="font-size:11px;background:var(--teal-light);color:var(--teal-dark);border-radius:6px;padding:2px 6px">${o.couponCode}</span><br><span style="font-size:11px;color:var(--red)">-NT$${(o.couponDiscount||0).toLocaleString()}</span>`:'-'}</td>
-        <td rowspan="${o.items.length}" style="font-weight:600;color:var(--teal)">NT$${o.total.toLocaleString()}</td>
-        <td rowspan="${o.items.length}">
-          ${paidBadge}<br>
-          <button class="btn btn-sm" style="margin-top:4px" onclick="toggleOrderField('${o._docId}','paid',${!o.paid})">${o.paid?'取消':'標記付款'}</button>
-        </td>
-        <td rowspan="${o.items.length}">
-          ${shipBadge}<br>
-          <button class="btn btn-sm" style="margin-top:4px" onclick="toggleOrderField('${o._docId}','shipped',${!o.shipped})">${o.shipped?'取消':'標記出貨'}</button>
-        </td>
-        <td rowspan="${o.items.length}">
-          <input class="order-note-inp" value="${o.shippedDate||''}" placeholder="出貨日期" onchange="updateOrderNote('${o._docId}','shippedDate',this.value)">
-        </td>
-        <td rowspan="${o.items.length}">
-          <input class="order-note-inp" value="${o.noteAccount||''}" placeholder="查帳備註" onchange="updateOrderNote('${o._docId}','noteAccount',this.value)">
-        </td>
-        <td rowspan="${o.items.length}">
-          <input class="order-note-inp" value="${o.noteShip||''}" placeholder="出貨備註" onchange="updateOrderNote('${o._docId}','noteShip',this.value)">
-        </td>
-        <td rowspan="${o.items.length}">${o.note||'-'}</td>`:''}
-      </tr>`);
-    });
-  });
-  tb.innerHTML=rows.join('');
+    const paidBadge=o.paid
+      ?'<span class="status-badge status-paid">✓ 已付款</span>'
+      :'<span class="status-badge status-unpaid">✗ 未付款</span>';
+    const shipBadge=o.shipped
+      ?'<span class="status-badge status-shipped">▶ 已出貨</span>'
+      :'<span class="status-badge status-unshipped">◷ 未出貨</span>';
+
+    const itemsHtml=(o.items||[]).map(item=>`
+      <div class="order-card-item">
+        <span>${item.name}${item.color?' ・'+item.color:''}${item.powerDisplay?' ・'+item.powerDisplay:''} ×${item.qty}</span>
+        <span style="font-weight:500">NT$${(item.subtotal||item.price*item.qty||0).toLocaleString()}</span>
+      </div>`).join('');
+
+    const discRow=o.discAmt>0?`<div class="order-card-row"><span class="order-card-label">優惠折扣</span><span style="color:var(--red)">-NT$${o.discAmt.toLocaleString()}</span></div>`:'';
+    const couponRow=o.couponCode?`<div class="order-card-row"><span class="order-card-label">優惠碼 ${o.couponCode}</span><span style="color:var(--red)">-NT$${(o.couponDiscount||0).toLocaleString()}</span></div>`:'';
+
+    return `<div class="order-card">
+      <!-- 訂單頭部 -->
+      <div class="order-card-head">
+        <input type="checkbox" class="order-card-check" ${chk?'checked':''} onchange="toggleOrderSel('${o._docId}',this.checked)">
+        <span class="order-card-no">${o.orderNo||'-'}</span>
+        <span class="order-card-time">${o.time||''}</span>
+        <div class="order-card-badges">
+          ${paidBadge}${shipBadge}
+        </div>
+        <button class="btn btn-sm" onclick="openOrderEdit('${o._docId}')" style="margin-left:4px">✏️ 編輯</button>
+      </div>
+
+      <!-- 兩欄資訊 -->
+      <div class="order-card-body">
+        <div class="order-card-section">
+          <h5>客戶資訊</h5>
+          <div class="order-card-row"><span class="order-card-label">姓名</span><span>${o.name||'-'}</span></div>
+          <div class="order-card-row"><span class="order-card-label">電話</span><span>${o.phone||'-'}</span></div>
+          <div class="order-card-row"><span class="order-card-label">IG</span><span>${o.ig||'-'}</span></div>
+          ${o.email?`<div class="order-card-row"><span class="order-card-label">Email</span><span style="font-size:11px">${o.email}</span></div>`:''}
+        </div>
+        <div class="order-card-section">
+          <h5>取貨資訊</h5>
+          <div class="order-card-row"><span class="order-card-label">超商</span><span>${o.cvs||'-'}</span></div>
+          <div class="order-card-row"><span class="order-card-label">門市</span><span>${o.storeName||'-'}${o.storeNo?' ('+o.storeNo+')':''}</span></div>
+          <div class="order-card-row"><span class="order-card-label">付款</span><span>${o.payMethod||'-'}</span></div>
+          ${o.note?`<div class="order-card-row"><span class="order-card-label">備註</span><span>${o.note}</span></div>`:''}
+        </div>
+      </div>
+
+      <!-- 商品明細 -->
+      <div class="order-card-items">
+        <div style="font-size:11px;font-weight:600;color:var(--gray-text);margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em">商品明細</div>
+        ${itemsHtml}
+        <div style="display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;font-size:12px">
+          <span><span style="color:var(--gray-text)">小計</span> NT$${(o.subtotal||0).toLocaleString()}</span>
+          <span><span style="color:var(--gray-text)">運費</span> ${o.ship===0?'免運':'NT$'+(o.ship||0).toLocaleString()}</span>
+          ${o.discAmt?`<span style="color:var(--red)">折扣 -NT$${o.discAmt.toLocaleString()}</span>`:''}
+          ${o.couponCode?`<span style="color:var(--red)">優惠碼(${o.couponCode}) -NT$${(o.couponDiscount||0).toLocaleString()}</span>`:''}
+        </div>
+      </div>
+
+      <!-- 底部操作列 -->
+      <div class="order-card-footer">
+        <span class="order-card-total">總金額 NT$${(o.total||0).toLocaleString()}</span>
+        <button class="btn btn-sm" style="background:${o.paid?'var(--red-light)':'var(--teal-light)'};color:${o.paid?'var(--red)':'var(--teal-dark)'};border-color:${o.paid?'var(--red)':'var(--teal-border)'}"
+          onclick="toggleOrderField('${o._docId}','paid',${!o.paid})">${o.paid?'取消付款':'✓ 標記付款'}</button>
+        <button class="btn btn-sm" style="background:${o.shipped?'#dbeafe':'#ffedd5'};color:${o.shipped?'#1e40af':'#9a3412'};border-color:${o.shipped?'#93c5fd':'#fdba74'}"
+          onclick="toggleOrderField('${o._docId}','shipped',${!o.shipped})">${o.shipped?'取消出貨':'▶ 標記出貨'}</button>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input class="order-note-inp" value="${o.shippedDate||''}" placeholder="出貨日期" style="width:90px"
+            onchange="updateOrderNote('${o._docId}','shippedDate',this.value)">
+          <input class="order-note-inp" value="${o.noteAccount||''}" placeholder="查帳備註" style="width:80px"
+            onchange="updateOrderNote('${o._docId}','noteAccount',this.value)">
+          <input class="order-note-inp" value="${o.noteShip||''}" placeholder="出貨備註" style="width:80px"
+            onchange="updateOrderNote('${o._docId}','noteShip',this.value)">
+        </div>
+      </div>
+    </div>`;
+  }).join('');
   refreshStats();
 }
 
@@ -2696,6 +2791,154 @@ async function updateOrderNote(docId, field, val){
     await updateDoc(doc(db,'orders',docId),{[field]:val});
     const o=orders.find(x=>x._docId===docId); if(o) o[field]=val;
   }catch(e){ console.error(e); }
+}
+
+// ── 訂單編輯 ──────────────────────────────────────
+function openOrderEdit(docId){
+  const o=orders.find(x=>x._docId===docId); if(!o) return;
+  $('oe-docid').value=docId;
+  $('order-edit-title').textContent='編輯訂單 '+o.orderNo;
+  $('oe-name').value=o.name||'';
+  $('oe-phone').value=o.phone||'';
+  $('oe-ig').value=o.ig||'';
+  $('oe-email').value=o.email||'';
+  $('oe-cvs').value=o.cvs||'7-11';
+  $('oe-store-name').value=o.storeName||'';
+  $('oe-store-no').value=o.storeNo||'';
+  $('oe-pay-method').value=o.payMethod||'';
+  $('oe-note').value=o.note||'';
+  // 填入商品列表
+  oeRenderItems(o.items||[]);
+  oeCalcTotal();
+  $('modal-order-edit').classList.add('open');
+}
+
+function oeRenderItems(items){
+  $('oe-items-list').innerHTML=items.map((item,i)=>`
+    <div class="oe-item-row" style="display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:6px;align-items:center;background:var(--gray-bg);border-radius:8px;padding:8px">
+      <input type="text" value="${item.name||''}" placeholder="商品名稱"
+        style="padding:5px 8px;border:1px solid var(--gray-border);border-radius:6px;font-size:12px;outline:none"
+        oninput="oeCalcTotal()">
+      <input type="text" value="${item.color||''}" placeholder="顏色"
+        style="padding:5px 8px;border:1px solid var(--gray-border);border-radius:6px;font-size:12px;outline:none">
+      <input type="text" value="${item.powerDisplay||''}" placeholder="度數"
+        style="padding:5px 8px;border:1px solid var(--gray-border);border-radius:6px;font-size:12px;outline:none">
+      <div style="display:flex;gap:4px;align-items:center">
+        <input type="number" value="${item.price||0}" min="0" placeholder="單價"
+          style="width:70px;padding:5px 6px;border:1px solid var(--gray-border);border-radius:6px;font-size:12px;outline:none"
+          oninput="oeCalcTotal()">
+        <span style="font-size:11px;color:var(--gray-text)">×</span>
+        <input type="number" value="${item.qty||1}" min="1" max="99"
+          style="width:44px;padding:5px 4px;border:1px solid var(--gray-border);border-radius:6px;font-size:12px;outline:none;text-align:center"
+          oninput="oeCalcTotal()">
+      </div>
+      <button type="button" onclick="oeRemoveItem(this)"
+        style="background:none;border:none;cursor:pointer;color:var(--red);font-size:16px;padding:0 4px;line-height:1">✕</button>
+    </div>`).join('');
+}
+
+function oeAddItem(){
+  const list=$('oe-items-list');
+  const div=document.createElement('div');
+  div.className='oe-item-row';
+  div.style.cssText='display:grid;grid-template-columns:2fr 1fr 1fr 1fr auto;gap:6px;align-items:center;background:var(--gray-bg);border-radius:8px;padding:8px';
+  div.innerHTML=`
+    <input type="text" value="" placeholder="商品名稱"
+      style="padding:5px 8px;border:1px solid var(--gray-border);border-radius:6px;font-size:12px;outline:none"
+      oninput="oeCalcTotal()">
+    <input type="text" value="" placeholder="顏色"
+      style="padding:5px 8px;border:1px solid var(--gray-border);border-radius:6px;font-size:12px;outline:none">
+    <input type="text" value="" placeholder="度數"
+      style="padding:5px 8px;border:1px solid var(--gray-border);border-radius:6px;font-size:12px;outline:none">
+    <div style="display:flex;gap:4px;align-items:center">
+      <input type="number" value="0" min="0" placeholder="單價"
+        style="width:70px;padding:5px 6px;border:1px solid var(--gray-border);border-radius:6px;font-size:12px;outline:none"
+        oninput="oeCalcTotal()">
+      <span style="font-size:11px;color:var(--gray-text)">×</span>
+      <input type="number" value="1" min="1" max="99"
+        style="width:44px;padding:5px 4px;border:1px solid var(--gray-border);border-radius:6px;font-size:12px;outline:none;text-align:center"
+        oninput="oeCalcTotal()">
+    </div>
+    <button type="button" onclick="oeRemoveItem(this)"
+      style="background:none;border:none;cursor:pointer;color:var(--red);font-size:16px;padding:0 4px;line-height:1">✕</button>`;
+  list.appendChild(div);
+  oeCalcTotal();
+}
+
+function oeRemoveItem(btn){ btn.closest('.oe-item-row').remove(); oeCalcTotal(); }
+
+function oeGetItems(){
+  return Array.from($('oe-items-list').querySelectorAll('.oe-item-row')).map(row=>{
+    const inputs=row.querySelectorAll('input');
+    const name=(inputs[0]?.value||'').trim();
+    const color=(inputs[1]?.value||'').trim();
+    const powerDisplay=(inputs[2]?.value||'').trim();
+    const price=Number(inputs[3]?.value)||0;
+    const qty=Number(inputs[4]?.value)||1;
+    return {name,color,powerDisplay,price,qty,subtotal:price*qty};
+  }).filter(i=>i.name);
+}
+
+function oeCalcTotal(){
+  const items=oeGetItems();
+  const sub=items.reduce((s,i)=>s+i.price*i.qty,0);
+  const ship=calcShip(sub);
+  // 不重跑優惠（保留歷史數據），只顯示小計+運費
+  const docId=$('oe-docid').value;
+  const o=orders.find(x=>x._docId===docId);
+  const discAmt=o?.discAmt||0;
+  const couponDisc=o?.couponDiscount||0;
+  const total=Math.max(0,sub+ship-discAmt-couponDisc);
+  $('oe-subtotal').textContent='NT$'+sub.toLocaleString();
+  $('oe-ship').textContent=ship===0?'免運':'NT$'+ship.toLocaleString();
+  const discRow=$('oe-disc-row');
+  if(discAmt>0||couponDisc>0){
+    $('oe-disc').textContent='-NT$'+(discAmt+couponDisc).toLocaleString();
+    if(discRow) discRow.style.display='flex';
+  } else {
+    if(discRow) discRow.style.display='none';
+  }
+  $('oe-total').textContent='NT$'+total.toLocaleString();
+}
+
+async function saveOrderEdit(){
+  const docId=$('oe-docid').value; if(!docId) return;
+  const name=$('oe-name').value.trim();
+  if(!name) return alert('請填寫姓名');
+  const items=oeGetItems();
+  if(!items.length) return alert('至少需要一項商品');
+
+  const sub=items.reduce((s,i)=>s+i.price*i.qty,0);
+  const ship=calcShip(sub);
+  const o=orders.find(x=>x._docId===docId);
+  const discAmt=o?.discAmt||0;
+  const couponDisc=o?.couponDiscount||0;
+  const total=Math.max(0,sub+ship-discAmt-couponDisc);
+
+  const upd={
+    name,
+    phone:$('oe-phone').value.trim(),
+    ig:$('oe-ig').value.trim().replace(/^@/,''),
+    email:$('oe-email').value.trim(),
+    cvs:$('oe-cvs').value,
+    storeName:$('oe-store-name').value.trim(),
+    storeNo:$('oe-store-no').value.trim(),
+    payMethod:$('oe-pay-method').value.trim(),
+    note:$('oe-note').value.trim(),
+    items,
+    subtotal:sub, ship, total
+    // discAmt / couponCode / couponDiscount 保留歷史值，不修改
+  };
+
+  loading(true);
+  try{
+    await updateDoc(doc(db,'orders',docId),upd);
+    if(o) Object.assign(o,upd);
+    closeModal('modal-order-edit');
+    renderOrderTable();
+    alert('✅ 訂單已更新');
+  }catch(e){ alert('❌ 儲存失敗：'+e.message); }
+  loading(false);
 }
 
 // ── Product selection & batch ─────────────────────
@@ -3269,6 +3512,7 @@ Object.assign(window,{
   applyCoupon,clearCoupon,
   toggleProductSel,toggleProductSelAll,clearProductSel,batchProductActive,
   renderOrderTable,exportExcel,clearDateFilter,
+  openOrderEdit,oeAddItem,oeRemoveItem,saveOrderEdit,
   toggleOrderSel,toggleOrderSelAll,clearOrderSel,batchOrderStatus,batchDeleteOrders,
   toggleOrderField,updateOrderNote,
   renderDiscountAdmin,addDiscRule,removeDiscRule,discField,saveDiscounts,discToggleCat,
