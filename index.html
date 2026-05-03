@@ -1154,6 +1154,20 @@ function genOrderNo(){
 }
 function closeModal(id){ $(id).classList.remove('open'); }
 function showToast(msg){ const t=$('cart-toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2200); }
+function showSaveToast(msg){
+  // 管理後台用的儲存提示（左上角，不遮擋操作）
+  let t=$('save-toast');
+  if(!t){
+    t=document.createElement('div');
+    t.id='save-toast';
+    t.style.cssText='position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#065f46;color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap';
+    document.body.appendChild(t);
+  }
+  t.textContent=msg;
+  t.style.opacity='1';
+  clearTimeout(t._tid);
+  t._tid=setTimeout(()=>t.style.opacity='0',2500);
+}
 function setStoreSearch(v){ storeSearch=(v||'').trim().toLowerCase(); renderStore(); }
 function updateStoreStep(step){
   storeStep=step;
@@ -1211,8 +1225,11 @@ async function loadPublicData(){
     ]);
     if(sd.exists()){
       const d=sd.data();
+      // 深度合併：Firestore 資料覆蓋預設值，但確保巢狀物件不被整個替換
       settings={...settings,...d};
-      // 遷移舊格式：若有 emailShow 但沒有 fields，自動遷移
+      // productOptions 特別保護：若 Firestore 有存就用 Firestore 的，否則保留預設
+      if(d.productOptions) settings.productOptions=d.productOptions;
+      // 遷移舊格式
       if(!settings.fields||!settings.fields.length){
         const fc=settings.fieldConfig||{};
         const es=settings.emailShow||'0';
@@ -1742,26 +1759,51 @@ function loadSettingsForm(){
 }
 
 async function saveSettings(){
-  settings.title=$('cfg-title').value; settings.desc=$('cfg-desc').value;
-  settings.deadline=$('cfg-deadline').value; settings.announce=$('cfg-announce').value;
-  settings.closedText=$('cfg-closed-text').value; settings.open=$('cfg-open').value;
-  settings.ship=Number($('cfg-ship').value)||0; settings.freeShip=Number($('cfg-free-ship').value)||0;
-  settings.shipLabel=$('cfg-ship-label').value; settings.freeShipText=$('cfg-free-ship-text').value;
-  settings.payReminder=$('cfg-pay-reminder').value; settings.successMsg=$('cfg-success-msg').value;
-  // fields 已在 updateField/addFieldRow/removeField 即時更新到 settings.fields
-  // 確保固定欄位設定正確
+  // 從 DOM 讀取所有設定值
+  settings.title        = $('cfg-title')?.value||'';
+  settings.desc         = $('cfg-desc')?.value||'';
+  settings.deadline     = $('cfg-deadline')?.value||'';
+  settings.announce     = $('cfg-announce')?.value||'';
+  settings.closedText   = $('cfg-closed-text')?.value||'';
+  settings.open         = $('cfg-open')?.value||'1';
+  settings.ship         = Number($('cfg-ship')?.value)||0;
+  settings.freeShip     = Number($('cfg-free-ship')?.value)||0;
+  settings.shipLabel    = $('cfg-ship-label')?.value||'';
+  settings.freeShipText = $('cfg-free-ship-text')?.value||'';
+  settings.payReminder  = $('cfg-pay-reminder')?.value||'';
+  settings.successMsg   = $('cfg-success-msg')?.value||'';
+
+  // 確保 fields 固定欄位正確
   const fields=getFields();
   _fixedKeys.forEach(k=>{
     const f=fields.find(x=>x.key===k);
     if(f){ f.visible=true; f.required=true; }
   });
   settings.fields=fields;
+
+  // 清除所有 undefined（Firestore 不接受 undefined）
+  function sanitize(obj){
+    if(Array.isArray(obj)) return obj.map(sanitize);
+    if(obj&&typeof obj==='object'){
+      const out={};
+      for(const [k,v] of Object.entries(obj)){
+        if(v!==undefined) out[k]=sanitize(v);
+      }
+      return out;
+    }
+    return obj??null;
+  }
+  const toSave=sanitize(settings);
+
   loading(true);
   try{
-    await setDoc(doc(db,'store','settings'),settings);
+    // 用 merge:false 確保完整儲存（不留舊欄位殘渣）
+    await setDoc(doc(db,'store','settings'), toSave);
     applySettings();
-    alert('✅ 設定已儲存！');
-  }catch(e){ alert('❌ 儲存失敗：'+e.message); }
+    showSaveToast('✅ 設定已儲存！');
+  }catch(e){
+    alert('❌ 儲存失敗：'+e.message+'\n\n請確認 Firebase 規則允許寫入 store 集合');
+  }
   loading(false);
 }
 
@@ -2632,6 +2674,7 @@ async function saveProduct(){
     if(docId){ await updateDoc(doc(db,'products',docId),obj); const i=products.findIndex(p=>p._docId===docId); products[i]={...products[i],...obj}; }
     else { const r=await addDoc(collection(db,'products'),obj); products.push({...obj,_docId:r.id}); }
     renderProductTable(); renderStore(); closeModal('modal-product');
+    showSaveToast('✅ 商品已儲存！');
   }catch(e){
     let msg=e.message;
     if(e.code==='permission-denied'||msg.includes('permission')||msg.includes('PERMISSION_DENIED'))
@@ -3264,8 +3307,17 @@ function removeDiscRule(i){ discounts.splice(i,1); renderDiscountAdmin(); }
 
 async function saveDiscounts(){
   loading(true);
-  try{ await setDoc(doc(db,'store','discounts'),{rules:discounts}); alert('✅ 優惠設定已儲存！'); }
-  catch(e){ alert('❌ '+e.message); }
+  try{
+    // 清除 undefined
+    const rules=JSON.parse(JSON.stringify(discounts.map(r=>{
+      const out={};
+      for(const [k,v] of Object.entries(r)){ if(v!==undefined) out[k]=v; }
+      return out;
+    })));
+    await setDoc(doc(db,'store','discounts'),{rules});
+    discounts=rules; // 同步 in-memory
+    showSaveToast('✅ 優惠設定已儲存！');
+  }catch(e){ alert('❌ 優惠儲存失敗：'+e.message); }
   loading(false);
 }
 
@@ -3364,21 +3416,18 @@ async function saveCoupon(){
   if(type==='percent'&&(value<=0||value>=100)) return alert('百分比需介於 1～99');
 
   const docId=$('coupon-edit-id').value;
-  // 檢查重複碼（新增時）
   if(!docId){
     const dup=coupons.find(c=>c.code===code);
     if(dup) return alert(`優惠碼「${code}」已存在`);
   }
 
   const obj={
-    code,
-    type,
-    value,
-    minAmount: parseFloat($('cpn-min').value)||0,
-    limit:     parseInt($('cpn-limit').value)||0,
-    used:      docId?(coupons.find(c=>c._docId===docId)?.used||0):0,
-    expireAt:  $('cpn-expire').value||'',
-    active:    $('cpn-active').value==='1',
+    code, type, value,
+    minOrder:   parseFloat($('cpn-min').value)||0,   // 統一用 minOrder（前台驗證用）
+    usedLimit:  parseInt($('cpn-limit').value)||0,    // 統一用 usedLimit（前台驗證用）
+    used:       docId?(coupons.find(c=>c._docId===docId)?.used||0):0,
+    expireDate: $('cpn-expire').value||'',            // 統一用 expireDate（前台驗證用）
+    active:     $('cpn-active').value==='1',
   };
 
   loading(true);
@@ -3386,14 +3435,15 @@ async function saveCoupon(){
     if(docId){
       await updateDoc(doc(db,'couponCodes',docId),obj);
       const i=coupons.findIndex(c=>c._docId===docId);
-      coupons[i]={...coupons[i],...obj};
+      if(i>=0) coupons[i]={...coupons[i],...obj};
     } else {
       const r=await addDoc(collection(db,'couponCodes'),obj);
       coupons.push({...obj,_docId:r.id});
     }
     renderCouponTable();
     closeModal('modal-coupon');
-  }catch(e){ alert('❌ 儲存失敗：'+e.message); }
+    showSaveToast('✅ 優惠碼已儲存！');
+  }catch(e){ alert('❌ 優惠碼儲存失敗：'+e.message); }
   loading(false);
 }
 
@@ -3463,13 +3513,31 @@ function togglePayFields(){ const t=$('pay-f-type').value; $('pay-bank-fields').
 async function savePayMethod(){
   const name=$('pay-f-name').value.trim(); if(!name) return alert('請填寫付款方式名稱');
   const docId=$('pay-edit-id').value;
-  const obj={name,icon:$('pay-f-icon').value.trim(),type:$('pay-f-type').value,bank:$('pay-f-bank').value.trim(),acct:$('pay-f-acct').value.trim(),qr:$('pay-f-qr').value.trim(),note:$('pay-f-note').value.trim(),active:$('pay-f-active').value==='1',order:docId?(payMethods.find(m=>m._docId===docId)?.order||0):payMethods.length};
+  const obj={
+    name, icon:$('pay-f-icon').value.trim(),
+    type:$('pay-f-type').value,
+    bank:$('pay-f-bank').value.trim(),
+    acct:$('pay-f-acct').value.trim(),
+    qr:$('pay-f-qr').value.trim(),
+    note:$('pay-f-note').value.trim(),
+    active:$('pay-f-active').value==='1',
+    order:docId?(payMethods.find(m=>m._docId===docId)?.order||0):payMethods.length
+  };
+  // 清除空字串以外的 undefined
+  Object.keys(obj).forEach(k=>{ if(obj[k]===undefined) obj[k]=''; });
   loading(true);
   try{
-    if(docId){ await updateDoc(doc(db,'payMethods',docId),obj); const i=payMethods.findIndex(m=>m._docId===docId); payMethods[i]={...payMethods[i],...obj}; }
-    else { const r=await addDoc(collection(db,'payMethods'),obj); payMethods.push({...obj,_docId:r.id}); }
+    if(docId){
+      await updateDoc(doc(db,'payMethods',docId),obj);
+      const i=payMethods.findIndex(m=>m._docId===docId);
+      if(i>=0) payMethods[i]={...payMethods[i],...obj};
+    } else {
+      const r=await addDoc(collection(db,'payMethods'),obj);
+      payMethods.push({...obj,_docId:r.id});
+    }
     renderPayMethodList(); closeModal('modal-pay');
-  }catch(e){ alert('❌ '+e.message); }
+    showSaveToast('✅ 付款方式已儲存！');
+  }catch(e){ alert('❌ 付款方式儲存失敗：'+e.message); }
   loading(false);
 }
 
