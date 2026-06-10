@@ -2444,8 +2444,32 @@ function refreshStats(){
 }
 
 // ── Products admin ────────────────────────────────
+// 取得目前所有商品篩選條件套用後的結果（含排序）
+function getFilteredProducts(){
+  const searchQ=($('product-search-q')?.value||'').trim().toLowerCase();
+  const fCat   =$('pf-cat')?.value||'';
+  const fBrand =$('pf-brand')?.value||'';
+  const fGdia  =$('pf-gdia')?.value||'';
+  const fDeg   =$('pf-deg')?.value||'';
+  const fSort  =$('pf-price-sort')?.value||'';
+  let list=products.filter(p=>{
+    if(searchQ){
+      const hay=[p.name,p.cat,p.brand,p.gdia,p.descProd].filter(Boolean).join(' ').toLowerCase();
+      if(!hay.includes(searchQ)) return false;
+    }
+    if(fCat   && p.cat    !==fCat)    return false;
+    if(fBrand && p.brand  !==fBrand)  return false;
+    if(fGdia  && p.gdia   !==fGdia)   return false;
+    if(fDeg   && p.degMode!==fDeg)    return false;
+    return true;
+  });
+  if(fSort==='asc')  list=[...list].sort((a,b)=>a.price-b.price);
+  if(fSort==='desc') list=[...list].sort((a,b)=>b.price-a.price);
+  return list;
+}
+
 function renderProductTable(){
-  // 讀取所有篩選值
+  // 讀取所有篩選值（用於顯示提示列）
   const searchQ=($('product-search-q')?.value||'').trim().toLowerCase();
   const fCat   =$('pf-cat')?.value||'';
   const fBrand =$('pf-brand')?.value||'';
@@ -2458,22 +2482,8 @@ function renderProductTable(){
   const clearBtn=$('pf-clear-btn');
   if(clearBtn) clearBtn.style.display=hasFilter?'':'none';
 
-  // 過濾（AND 條件）
-  let list=products.filter(p=>{
-    if(searchQ){
-      const hay=[p.name,p.cat,p.brand,p.gdia,p.descProd].filter(Boolean).join(' ').toLowerCase();
-      if(!hay.includes(searchQ)) return false;
-    }
-    if(fCat   && p.cat    !==fCat)    return false;
-    if(fBrand && p.brand  !==fBrand)  return false;
-    if(fGdia  && p.gdia   !==fGdia)   return false;
-    if(fDeg   && p.degMode!==fDeg)    return false;
-    return true;
-  });
-
-  // 排序
-  if(fSort==='asc')  list=[...list].sort((a,b)=>a.price-b.price);
-  if(fSort==='desc') list=[...list].sort((a,b)=>b.price-a.price);
+  // 使用共用函式取得篩選後清單
+  const list=getFilteredProducts();
 
   // 更新篩選結果資訊列
   const infoEl=$('product-filter-info');
@@ -2527,6 +2537,12 @@ function renderProductTable(){
       </td>
     </tr>`;
   }).join('');
+  // 同步全選 checkbox 狀態（僅依篩選後的結果判斷）
+  const selAll=$('product-sel-all');
+  if(selAll){
+    const allChecked=list.length>0 && list.every(p=>selectedProductIds.has(p._docId));
+    selAll.checked=allChecked;
+  }
   refreshStats();
 }
 
@@ -2730,7 +2746,6 @@ function setOrderFilter(f){
   renderOrderTable();
 }
 
-// 取得目前所有篩選條件（關鍵字 + 日期 + 狀態）套用後的結果
 function getFilteredOrders(){
   const q=($('order-search-q')?.value||'').trim();
   const from=$('order-date-from')?.value||'';
@@ -2747,7 +2762,7 @@ function getFilteredOrders(){
       if(to&&oDate&&oDate>to) dateOk=false;
     }
     let filterOk=true;
-    if(currentOrderFilter==='paid')      filterOk=!!o.paid;
+    if(currentOrderFilter==='paid')          filterOk=!!o.paid;
     else if(currentOrderFilter==='unpaid')    filterOk=!o.paid;
     else if(currentOrderFilter==='shipped')   filterOk=!!o.shipped;
     else if(currentOrderFilter==='unshipped') filterOk=!o.shipped;
@@ -2761,7 +2776,6 @@ function renderOrderTable(){
   const tb=$('order-tbody');
   if(!list.length){
     tb.innerHTML=`<div style="text-align:center;color:#aaa;padding:2rem">尚無訂單</div>`;
-    // 全選 checkbox 同步
     const selAll=$('order-sel-all'); if(selAll) selAll.checked=false;
     refreshStats(); return;
   }
@@ -2844,7 +2858,6 @@ function renderOrderTable(){
       </div>
     </div>`;
   }).join('');
-  // 同步全選 checkbox 狀態（僅依篩選後的結果判斷）
   const selAll=$('order-sel-all');
   if(selAll){
     const allChecked=list.length>0 && list.every(o=>selectedOrderIds.has(o._docId));
@@ -3037,8 +3050,9 @@ function toggleProductSel(docId, checked){
   _updateProductBatchBar();
 }
 function toggleProductSelAll(checked){
-  if(checked) products.forEach(p=>selectedProductIds.add(p._docId));
-  else selectedProductIds.clear();
+  const filtered=getFilteredProducts();
+  if(checked) filtered.forEach(p=>selectedProductIds.add(p._docId));
+  else filtered.forEach(p=>selectedProductIds.delete(p._docId));
   renderProductTable(); _updateProductBatchBar();
 }
 function clearProductSel(){ selectedProductIds.clear(); $('product-sel-all').checked=false; renderProductTable(); _updateProductBatchBar(); }
@@ -3049,14 +3063,20 @@ function _updateProductBatchBar(){
   $('product-batch-count').textContent=`已選 ${n} 項`;
 }
 async function batchProductActive(active){
-  if(!selectedProductIds.size) return;
+  // 只作用於目前篩選結果中已勾選的商品
+  const filtered=getFilteredProducts();
+  const targetIds=filtered.map(p=>p._docId).filter(id=>selectedProductIds.has(id));
+  if(!targetIds.length) return;
   loading(true);
   try{
-    for(const docId of selectedProductIds){
+    for(const docId of targetIds){
       await updateDoc(doc(db,'products',docId),{active});
       const p=products.find(x=>x._docId===docId); if(p) p.active=active;
     }
-    clearProductSel(); renderStore();
+    // 只清除目前篩選範圍內的勾選，不影響其他篩選下的勾選
+    targetIds.forEach(id=>selectedProductIds.delete(id));
+    _updateProductBatchBar();
+    renderProductTable(); renderStore();
   }catch(e){ alert('❌ '+e.message); }
   loading(false);
 }
@@ -3624,7 +3644,7 @@ Object.assign(window,{
   doLogin,logout,switchTab,
   openProductModal,editProduct,saveProduct,toggleActive,deleteProduct,
   addImgUrlField,syncImgUrls,removeImg,handleImgFiles,
-  renderProductTable,populateProductFilters,clearProductFilters,
+  getFilteredProducts,renderProductTable,populateProductFilters,clearProductFilters,
   applyCoupon,clearCoupon,
   toggleProductSel,toggleProductSelAll,clearProductSel,batchProductActive,
   renderOrderTable,exportExcel,clearDateFilter,setOrderFilter,
