@@ -574,11 +574,11 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:poin
     </div>
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
       <span style="font-size:12px;color:var(--gray-text)">篩選：</span>
-      <button id="of-all"   class="btn btn-sm active-filter" onclick="setOrderFilter('all')"       style="border-radius:20px">全部</button>
-      <button id="of-paid"  class="btn btn-sm" onclick="setOrderFilter('paid')"      style="border-radius:20px">✓ 已付款</button>
-      <button id="of-unpaid" class="btn btn-sm" onclick="setOrderFilter('unpaid')"   style="border-radius:20px">✗ 未付款</button>
-      <button id="of-shipped" class="btn btn-sm" onclick="setOrderFilter('shipped')" style="border-radius:20px">▶ 已出貨</button>
-      <button id="of-unshipped" class="btn btn-sm" onclick="setOrderFilter('unshipped')" style="border-radius:20px">◷ 未出貨</button>
+      <button id="of-all"       class="btn btn-sm active-filter" onclick="setOrderFilter('all')"       style="border-radius:20px">全部</button>
+      <button id="of-paid"      class="btn btn-sm"               onclick="setOrderFilter('paid')"      style="border-radius:20px">✓ 已付款</button>
+      <button id="of-unpaid"    class="btn btn-sm"               onclick="setOrderFilter('unpaid')"    style="border-radius:20px">✗ 未付款</button>
+      <button id="of-shipped"   class="btn btn-sm"               onclick="setOrderFilter('shipped')"   style="border-radius:20px">▶ 已出貨</button>
+      <button id="of-unshipped" class="btn btn-sm"               onclick="setOrderFilter('unshipped')" style="border-radius:20px">◷ 未出貨</button>
     </div>
     <div class="tbl-wrap" style="border:none;background:transparent;overflow:visible">
       <div id="order-tbody"></div>
@@ -2433,7 +2433,7 @@ function refreshStats(){
   const thisYear=now.getFullYear();
   const thisMonth=now.getMonth()+1;
   const monthOrders=orders.filter(o=>{
-    const rawDate=(o.time||'').split(' ')[0]; // "YYYY/M/D"
+    const rawDate=(o.time||'').split(' ')[0];
     const parts=rawDate.split('/');
     if(parts.length!==3) return false;
     return Number(parts[0])===thisYear && Number(parts[1])===thisMonth;
@@ -2720,6 +2720,7 @@ async function deleteProduct(docId){
 
 // ── Orders admin ──────────────────────────────────
 let currentOrderFilter='all';
+
 function setOrderFilter(f){
   currentOrderFilter=f;
   ['all','paid','unpaid','shipped','unshipped'].forEach(k=>{
@@ -2729,11 +2730,12 @@ function setOrderFilter(f){
   renderOrderTable();
 }
 
-function renderOrderTable(){
+// 取得目前所有篩選條件（關鍵字 + 日期 + 狀態）套用後的結果
+function getFilteredOrders(){
   const q=($('order-search-q')?.value||'').trim();
   const from=$('order-date-from')?.value||'';
   const to=$('order-date-to')?.value||'';
-  const list=orders.filter(o=>{
+  return orders.filter(o=>{
     const kw=!q||(o.name||'').includes(q)||(o.phone||'').includes(q)||
       (o.ig||'').includes(q)||(o.orderNo||'').includes(q);
     let dateOk=true;
@@ -2751,10 +2753,16 @@ function renderOrderTable(){
     else if(currentOrderFilter==='unshipped') filterOk=!o.shipped;
     return kw&&dateOk&&filterOk;
   });
+}
+
+function renderOrderTable(){
+  const list=getFilteredOrders();
 
   const tb=$('order-tbody');
   if(!list.length){
     tb.innerHTML=`<div style="text-align:center;color:#aaa;padding:2rem">尚無訂單</div>`;
+    // 全選 checkbox 同步
+    const selAll=$('order-sel-all'); if(selAll) selAll.checked=false;
     refreshStats(); return;
   }
 
@@ -2836,6 +2844,12 @@ function renderOrderTable(){
       </div>
     </div>`;
   }).join('');
+  // 同步全選 checkbox 狀態（僅依篩選後的結果判斷）
+  const selAll=$('order-sel-all');
+  if(selAll){
+    const allChecked=list.length>0 && list.every(o=>selectedOrderIds.has(o._docId));
+    selAll.checked=allChecked;
+  }
   refreshStats();
 }
 
@@ -3053,8 +3067,9 @@ function toggleOrderSel(docId, checked){
   _updateOrderBatchBar();
 }
 function toggleOrderSelAll(checked){
-  if(checked) orders.forEach(o=>selectedOrderIds.add(o._docId));
-  else selectedOrderIds.clear();
+  const filtered=getFilteredOrders();
+  if(checked) filtered.forEach(o=>selectedOrderIds.add(o._docId));
+  else filtered.forEach(o=>selectedOrderIds.delete(o._docId));
   renderOrderTable(); _updateOrderBatchBar();
 }
 function clearOrderSel(){ selectedOrderIds.clear(); $('order-sel-all').checked=false; renderOrderTable(); _updateOrderBatchBar(); }
