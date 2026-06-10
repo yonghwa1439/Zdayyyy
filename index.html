@@ -229,6 +229,7 @@ tr:hover td{background:#fafafa}
 .badge-on{background:var(--teal-light);color:var(--teal-dark)}
 .badge-off{background:#f0f0f0;color:#999}
 .toolbar{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+.active-filter{background:var(--teal)!important;color:#fff!important;border-color:var(--teal)!important}
 .toolbar-right{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
 .search-input{padding:8px 11px;border:1px solid var(--gray-border);border-radius:8px;font-size:13px;width:180px;outline:none}
 .search-input:focus{border-color:var(--teal)}
@@ -549,8 +550,8 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:poin
   <!-- Orders tab -->
   <div id="tc-orders" class="hidden">
     <div class="stats-grid">
-      <div class="stat-card"><div class="stat-label">總訂單數</div><div class="stat-value" id="o-count">0</div></div>
-      <div class="stat-card"><div class="stat-label">總金額</div><div class="stat-value" id="o-total" style="font-size:16px;color:var(--teal)">NT$0</div></div>
+      <div class="stat-card"><div class="stat-label">當月訂單數</div><div class="stat-value" id="o-count">0</div></div>
+      <div class="stat-card"><div class="stat-label">當月銷售金額</div><div class="stat-value" id="o-total" style="font-size:16px;color:var(--teal)">NT$0</div></div>
     </div>
     <div class="batch-bar" id="order-batch-bar" style="display:none">
       <span id="order-batch-count">已選 0 筆</span>
@@ -570,6 +571,14 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:poin
         <button class="btn btn-sm" onclick="clearDateFilter()">清除</button>
       </div>
       <div class="toolbar-right"><button class="btn btn-sm btn-primary" onclick="exportExcel()">📊 匯出 Excel</button></div>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
+      <span style="font-size:12px;color:var(--gray-text)">篩選：</span>
+      <button id="of-all"   class="btn btn-sm active-filter" onclick="setOrderFilter('all')"       style="border-radius:20px">全部</button>
+      <button id="of-paid"  class="btn btn-sm" onclick="setOrderFilter('paid')"      style="border-radius:20px">✓ 已付款</button>
+      <button id="of-unpaid" class="btn btn-sm" onclick="setOrderFilter('unpaid')"   style="border-radius:20px">✗ 未付款</button>
+      <button id="of-shipped" class="btn btn-sm" onclick="setOrderFilter('shipped')" style="border-radius:20px">▶ 已出貨</button>
+      <button id="of-unshipped" class="btn btn-sm" onclick="setOrderFilter('unshipped')" style="border-radius:20px">◷ 未出貨</button>
     </div>
     <div class="tbl-wrap" style="border:none;background:transparent;overflow:visible">
       <div id="order-tbody"></div>
@@ -2420,8 +2429,17 @@ function refreshStats(){
   $('s-total').textContent=products.length;
   $('s-active').textContent=products.filter(p=>p.active).length;
   $('s-off').textContent=products.filter(p=>!p.active).length;
-  const tot=orders.reduce((s,o)=>s+o.total,0);
-  $('o-count').textContent=orders.length;
+  const now=new Date();
+  const thisYear=now.getFullYear();
+  const thisMonth=now.getMonth()+1;
+  const monthOrders=orders.filter(o=>{
+    const rawDate=(o.time||'').split(' ')[0]; // "YYYY/M/D"
+    const parts=rawDate.split('/');
+    if(parts.length!==3) return false;
+    return Number(parts[0])===thisYear && Number(parts[1])===thisMonth;
+  });
+  const tot=monthOrders.reduce((s,o)=>s+o.total,0);
+  $('o-count').textContent=monthOrders.length;
   $('o-total').textContent='NT$'+tot.toLocaleString();
 }
 
@@ -2701,6 +2719,16 @@ async function deleteProduct(docId){
 }
 
 // ── Orders admin ──────────────────────────────────
+let currentOrderFilter='all';
+function setOrderFilter(f){
+  currentOrderFilter=f;
+  ['all','paid','unpaid','shipped','unshipped'].forEach(k=>{
+    const btn=$('of-'+k);
+    if(btn) btn.classList.toggle('active-filter',k===f);
+  });
+  renderOrderTable();
+}
+
 function renderOrderTable(){
   const q=($('order-search-q')?.value||'').trim();
   const from=$('order-date-from')?.value||'';
@@ -2716,7 +2744,12 @@ function renderOrderTable(){
       if(from&&oDate&&oDate<from) dateOk=false;
       if(to&&oDate&&oDate>to) dateOk=false;
     }
-    return kw&&dateOk;
+    let filterOk=true;
+    if(currentOrderFilter==='paid')      filterOk=!!o.paid;
+    else if(currentOrderFilter==='unpaid')    filterOk=!o.paid;
+    else if(currentOrderFilter==='shipped')   filterOk=!!o.shipped;
+    else if(currentOrderFilter==='unshipped') filterOk=!o.shipped;
+    return kw&&dateOk&&filterOk;
   });
 
   const tb=$('order-tbody');
@@ -3579,7 +3612,7 @@ Object.assign(window,{
   renderProductTable,populateProductFilters,clearProductFilters,
   applyCoupon,clearCoupon,
   toggleProductSel,toggleProductSelAll,clearProductSel,batchProductActive,
-  renderOrderTable,exportExcel,clearDateFilter,
+  renderOrderTable,exportExcel,clearDateFilter,setOrderFilter,
   openOrderEdit,oeAddItem,oeRemoveItem,saveOrderEdit,
   toggleOrderSel,toggleOrderSelAll,clearOrderSel,batchOrderStatus,batchDeleteOrders,
   toggleOrderField,updateOrderNote,
