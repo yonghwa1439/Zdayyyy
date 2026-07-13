@@ -3391,11 +3391,11 @@ async function saveDiscounts(){
 
 // ── 優惠碼管理 ────────────────────────────────────
 function _couponExpired(c){
-  if(!c.expireAt) return false;
-  return new Date(c.expireAt) < new Date(new Date().toDateString());
+  if(!c.expireDate) return false;
+  return new Date(c.expireDate) < new Date(new Date().toDateString());
 }
 function _couponExhausted(c){
-  return c.limit>0 && c.used>=c.limit;
+  return c.usedLimit>0 && c.used>=c.usedLimit;
 }
 function _couponStatus(c){
   if(!c.active) return {text:'停用',cls:'badge-off'};
@@ -3425,9 +3425,9 @@ function renderCouponTable(){
     const expired=_couponExpired(c);
     const exhausted=_couponExhausted(c);
     const typeText=c.type==='percent'?`${c.value}% OFF`:`NT$${Number(c.value).toLocaleString()}`;
-    const minText=c.minAmount>0?`NT$${Number(c.minAmount).toLocaleString()}`:'無限制';
-    const usedText=c.limit>0?`${c.used||0} / ${c.limit}`:`${c.used||0} / ∞`;
-    const expireText=c.expireAt||'永不到期';
+    const minText=c.minOrder>0?`NT$${Number(c.minOrder).toLocaleString()}`:'無限制';
+    const usedText=c.usedLimit>0?`${c.used||0} / ${c.usedLimit}`:`${c.used||0} / ∞`;
+    const expireText=c.expireDate||'永不到期';
     const warnStyle=st.warn?'color:var(--red);font-weight:500':'';
     return `<tr style="${expired||exhausted?'opacity:.7':''}">
       <td><b style="font-family:monospace;letter-spacing:.06em;font-size:13px">${c.code}</b></td>
@@ -3458,7 +3458,7 @@ function openCouponModal(docId=null){
     $('cpn-value').value=c.value||'';
     $('cpn-min').value=c.minOrder||'';
     $('cpn-limit').value=c.usedLimit||'';
-    $('cpn-expire').value=c.expireAt||'';
+    $('cpn-expire').value=c.expireDate||'';
     $('cpn-active').value=c.active?'1':'0';
   } else {
     ['cpn-code','cpn-value','cpn-min','cpn-limit','cpn-expire'].forEach(f=>{ const el=$(f); if(el) el.value=''; });
