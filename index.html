@@ -3456,8 +3456,8 @@ function openCouponModal(docId=null){
     $('cpn-code').value=c.code||'';
     $('cpn-type').value=c.type||'fixed';
     $('cpn-value').value=c.value||'';
-    $('cpn-min').value=c.minAmount||'';
-    $('cpn-limit').value=c.limit||'';
+    $('cpn-min').value=c.minOrder||'';
+    $('cpn-limit').value=c.usedLimit||'';
     $('cpn-expire').value=c.expireAt||'';
     $('cpn-active').value=c.active?'1':'0';
   } else {
