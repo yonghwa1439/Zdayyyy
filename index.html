@@ -954,7 +954,8 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--teal);cursor:poin
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
   getFirestore, doc, getDoc, setDoc,
-  collection, addDoc, getDocs, updateDoc, deleteDoc
+  collection, addDoc, getDocs, updateDoc, deleteDoc,
+  query, where
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import {
   getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged
@@ -3176,9 +3177,21 @@ async function doLookup(){
   el.innerHTML='<div style="text-align:center;color:var(--gray-text);padding:12px">查詢中…</div>';
 
   try{
-    const snap=await getDocs(collection(db,'orders'));
-    const allDocs=[];
-    snap.forEach(d=>allDocs.push({...d.data(),_docId:d.id}));
+    let allDocs=[];
+
+    if(isOrderNo){
+      // 訂單編號固定為系統產生格式（ZD+日期-4碼），一律大寫，可直接精準查詢
+      const snap=await getDocs(query(collection(db,'orders'), where('orderNo','==', q.toUpperCase())));
+      snap.forEach(d=>allDocs.push({...d.data(),_docId:d.id}));
+    }else if(isPhone){
+      // 電話建立訂單時已統一移除符號存入，可直接精準查詢
+      const snap=await getDocs(query(collection(db,'orders'), where('phone','==', qPhone)));
+      snap.forEach(d=>allDocs.push({...d.data(),_docId:d.id}));
+    }else{
+      // IG 帳號歷史資料大小寫不一致，暫時仍需整批取回後於前端比對
+      const snap=await getDocs(collection(db,'orders'));
+      snap.forEach(d=>allDocs.push({...d.data(),_docId:d.id}));
+    }
 
     // ── 完全比對（支援全部訂單，不只第一筆）────
     const results=allDocs.filter(o=>{
